@@ -225,7 +225,7 @@ function drawMapOnce() {
   for (let r=0; r<ROWS; r++) {
     for (let c=0; c<COLS; c++) {
       const tile = grid[r][c];
-      const img = assets[tile.type] || assets[tile.isRoad ? 'street_straight' : 'block_park'];
+      const img = (tile.isRoad && ROAD_TYPES[tile.type] ? assets[ROAD_TYPES[tile.type].img] : assets[tile.type]) || assets[tile.isRoad ? 'street_straight' : 'block_park'];
       if (img && img.complete) {
         mapCtx.save();
         mapCtx.translate(c*TILE + TILE/2, r*TILE + TILE/2);
