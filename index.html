@@ -833,10 +833,12 @@ function startNeonIntro() {
                     <div class="name-frame scale-90 origin-center">
                         <input type="text" id="driverName" placeholder="Tu Nombre" maxlength="12" autocomplete="off" class="name-input text-center">
                     </div>
-                    <div class="flex items-center justify-center gap-2 text-[10px] mt-1">
+                    <div class="flex items-center justify-center gap-2 text-[10px] mt-1 flex-wrap">
                         <span id="levelInfo" class="text-blue-400 hidden">Nivel: <span id="currentLevel">1</span></span>
+                        <span id="bestRecordInfo" class="text-amber-400 hidden">🏆 Récord: niv. <span id="bestRecordLevel">1</span></span>
                         <div id="savedMoneyDisplay" class="hidden"><span class="text-yellow-400 font-bold">💰 $<span id="savedMoneyAmount">0</span></span></div>
                     </div>
+                    <p class="text-slate-500 text-[8px] mt-0.5 hidden md:block" id="keyboardHint">Teclado: flechas/WASD mover · Espacio girar · R girar vehículo</p>
                     <button onclick="resetPlayerProgress()" id="resetProgressBtn" class="text-red-400 text-[9px] underline mt-0.5 hidden">Reiniciar</button>
                     <p id="welcomeBack" class="text-emerald-400 text-[10px] hidden">¡Hola de nuevo!</p>
                 </div>
@@ -895,7 +897,7 @@ function startNeonIntro() {
                 <button onclick="startGame()" class="btn-game play-btn-wrap mx-auto block scale-90" aria-label="PLAY">
                     <img src="play.png" alt="PLAY" class="play-img" />
                 </button>
-                <p class="text-slate-600 text-[8px]">v1.2</p>
+                <p class="text-slate-600 text-[8px]">v1.3</p>
             </div>
         </div>
     </div>
@@ -2998,10 +3000,13 @@ function generateTutorialLevel() {
 // ============ FUNCIONES DE GUARDADO LOCAL ============
 // Sistema mejorado: Soporta múltiples jugadores, cada uno con su propio progreso
 function saveGameData() {
+    if (typeof bestLevel !== 'number' || bestLevel < level) bestLevel = level;
     const gameData = {
         driverName: driverName,
         level: level,
+        bestLevel: bestLevel,
         totalMoney: totalMoney,
+        diamondsCollected: diamondsCollected,
         tutorialCompleted: tutorialCompleted,
         totalStars: totalStars, // Guardar estrellas
         premiumMotoUnlocked: premiumMotoUnlocked,
@@ -3091,9 +3096,23 @@ function loadGameData(playerName) {
                 }
             }
             
-            // Inicializar display de diamantes
+            // Diamantes por jugador (migrar desde clave global antigua si hace falta)
+            if (typeof gameData.diamondsCollected === 'number') {
+                diamondsCollected = gameData.diamondsCollected;
+            } else {
+                const legacy = parseInt(localStorage.getItem('diamondsCollected') || '0', 10);
+                diamondsCollected = Number.isFinite(legacy) ? legacy : 0;
+            }
             const diamondDisplay = $('diamondDisplay');
             if (diamondDisplay) diamondDisplay.textContent = diamondsCollected;
+
+            // Récord / mejor nivel
+            if (typeof gameData.bestLevel === 'number') {
+                bestLevel = Math.max(gameData.bestLevel, level || 1);
+            } else {
+                bestLevel = Math.max(level || 1, 1);
+            }
+            updateBestRecordUI();
 
             // Cargar estado del tutorial
             if (gameData.tutorialCompleted !== undefined) {
@@ -3276,8 +3295,10 @@ function resetPlayerProgress() {
     }).then(confirmed => {
         if (confirmed) {
             level = 1;
+            bestLevel = 1;
             totalMoney = 0;
             totalStars = 0;
+            diamondsCollected = 0;
             albumCollected = new Set();
             premiumMotoUnlocked = false;
             premiumTruckUnlocked = false;
@@ -3294,6 +3315,8 @@ function resetPlayerProgress() {
             $('moneyDisplay').textContent = '0';
             $('savedMoneyDisplay').classList.add('hidden');
             $('savedMoneyAmount').textContent = '0';
+            if ($('diamondDisplay')) $('diamondDisplay').textContent = '0';
+            updateBestRecordUI();
             updatePremiumMotoUI();
             updateShopUI();
             updateAlbumBadge();
@@ -3328,7 +3351,9 @@ function checkPlayerChange() {
         // Jugador nuevo - resetear todo a valores por defecto
         driverName = newName;
         level = 1;
+        bestLevel = 1;
         totalMoney = 0;
+        diamondsCollected = 0;
         albumCollected = new Set();
         premiumMotoUnlocked = false;
         premiumTruckUnlocked = false;
@@ -3336,6 +3361,8 @@ function checkPlayerChange() {
         
         // Actualizar UI
         $('moneyDisplay').textContent = totalMoney;
+        if ($('diamondDisplay')) $('diamondDisplay').textContent = '0';
+        updateBestRecordUI();
         $('savedMoneyDisplay').classList.add('hidden');
         $('welcomeBack').innerHTML = `¡Nuevo jugador: ${newName}! 🎮`;
         $('welcomeBack').classList.remove('hidden');
@@ -3895,6 +3922,8 @@ function init() {
 
     window.addEventListener('resize', () => { if (gameState !== 'START') { resize(); draw(); } });
     canvas.addEventListener('pointerdown', handleClick);
+    window.addEventListener('keydown', handleKeyDown);
+    updateBestRecordUI();
 }
 
 // Variable global para persistencia de misiones
@@ -3902,7 +3931,9 @@ let savedMissionForRetry = null;
 let savedLevelForRetry = null;
 
 // --- SISTEMA DE DIAMANTES Y ROMPECABEZAS ---
-let diamondsCollected = parseInt(localStorage.getItem('diamondsCollected') || '0');
+let diamondsCollected = 0; // por jugador (ver save/load); migrar desde clave global antigua
+let bestLevel = 1; // mejor nivel alcanzado por jugador
+let keyboardCursor = { col: 0, row: 0, visible: false };
 let puzzleActive = false;
 let puzzlePrevState = null;
 let puzzlePieces = [];
@@ -4513,7 +4544,7 @@ function generateLevel(showLoading = true) {
          else if (currentMission.type === 'red_diamond') currentMission.text = `💎 Consigue el diamante rojo`;
          else if (currentMission.type === 'pass_semaphore') currentMission.text = `🚦 Pasa por un semaforo`;
          
-         console.log('Restaurada misión: ', currentMission);
+         /* debug */
     } 
     else if (!isLevelWithMission) {
         // Niveles normales: solo entregar el pedido, sin misión especial
@@ -4953,19 +4984,121 @@ function resize() {
     }
 }
 
+function updateBestRecordUI() {
+    const info = $('bestRecordInfo');
+    const val = $('bestRecordLevel');
+    if (!info || !val) return;
+    const record = Math.max(1, bestLevel || 1, level || 1);
+    val.textContent = String(record);
+    if (record > 1) info.classList.remove('hidden');
+    else info.classList.add('hidden');
+}
+
+function isTypingInForm() {
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = (el.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || el.isContentEditable;
+}
+
+function ensureKeyboardCursor() {
+    if (!Number.isInteger(keyboardCursor.col)) keyboardCursor.col = 0;
+    if (!Number.isInteger(keyboardCursor.row)) keyboardCursor.row = 0;
+    keyboardCursor.col = Math.max(0, Math.min(COLS - 1, keyboardCursor.col));
+    keyboardCursor.row = Math.max(0, Math.min(ROWS - 1, keyboardCursor.row));
+}
+
+function moveKeyboardCursor(dc, dr) {
+    if (gameState !== 'EDITING' || inputLocked) return;
+    ensureKeyboardCursor();
+    keyboardCursor.col = Math.max(0, Math.min(COLS - 1, keyboardCursor.col + dc));
+    keyboardCursor.row = Math.max(0, Math.min(ROWS - 1, keyboardCursor.row + dr));
+    keyboardCursor.visible = true;
+    draw();
+}
+
+function activateKeyboardCell() {
+    if (gameState !== 'EDITING' || inputLocked) return;
+    ensureKeyboardCursor();
+    keyboardCursor.visible = true;
+    const col = keyboardCursor.col, row = keyboardCursor.row;
+    if (car && car.col === col && car.row === row) {
+        rotateCar();
+        return;
+    }
+    // Simular clic en la celda (misma lógica que handleClick sin preferir el auto)
+    const fakeEvent = {
+        clientX: 0,
+        clientY: 0,
+        _fromKeyboard: true,
+        _col: col,
+        _row: row
+    };
+    handleClick(fakeEvent);
+}
+
+function handleKeyDown(e) {
+    if (isTypingInForm()) return;
+    if (gameState !== 'EDITING' && gameState !== 'RUNNING') return;
+
+    const key = e.key;
+    const lower = key.length === 1 ? key.toLowerCase() : key;
+
+    // Girar vehículo
+    if (lower === 'r') {
+        if (gameState === 'EDITING') {
+            e.preventDefault();
+            rotateCar();
+        }
+        return;
+    }
+
+    // Activar celda / girar pieza
+    if (key === ' ' || key === 'Enter' || key === 'Spacebar') {
+        if (gameState === 'EDITING') {
+            e.preventDefault();
+            activateKeyboardCell();
+        }
+        return;
+    }
+
+    let dc = 0, dr = 0;
+    if (key === 'ArrowLeft' || lower === 'a') dc = -1;
+    else if (key === 'ArrowRight' || lower === 'd') dc = 1;
+    else if (key === 'ArrowUp' || lower === 'w') dr = -1;
+    else if (key === 'ArrowDown' || lower === 's') dr = 1;
+    else return;
+
+    e.preventDefault();
+    moveKeyboardCursor(dc, dr);
+}
+
 function handleClick(e) {
     initAudio();
     if (gameState !== 'EDITING' && gameState !== 'RUNNING') return;
     if (gameState === 'EDITING' && inputLocked) return;
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left, clickY = e.clientY - rect.top;
-    
-    if (car) {
-        const carDist = Math.sqrt((clickX - car.x) ** 2 + (clickY - car.y) ** 2);
-        if (carDist < TILE_SIZE * 0.5 || isRotateHintHit(clickX, clickY)) { rotateCar(); return; }
+
+    let col, row, clickX, clickY;
+    if (e && e._fromKeyboard) {
+        col = e._col; row = e._row;
+        clickX = (col + 0.5) * TILE_SIZE;
+        clickY = (row + 0.5) * TILE_SIZE;
+    } else {
+        const rect = canvas.getBoundingClientRect();
+        clickX = e.clientX - rect.left; clickY = e.clientY - rect.top;
+        if (car) {
+            const carDist = Math.sqrt((clickX - car.x) ** 2 + (clickY - car.y) ** 2);
+            if (carDist < TILE_SIZE * 0.5 || isRotateHintHit(clickX, clickY)) { rotateCar(); return; }
+        }
+        col = Math.floor(clickX / TILE_SIZE); row = Math.floor(clickY / TILE_SIZE);
+        // Sincronizar cursor de teclado con el toque
+        if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
+            keyboardCursor.col = col;
+            keyboardCursor.row = row;
+            keyboardCursor.visible = true;
+        }
     }
-    
-    const col = Math.floor(clickX / TILE_SIZE), row = Math.floor(clickY / TILE_SIZE);
+
     if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
         const tile = grid[row * COLS + col];
 
@@ -5323,7 +5456,7 @@ function placeDiamonds() {
         // Colocar 1 diamante por nivel
         const diamondTile = candidates[Math.floor(Math.random() * candidates.length)];
         diamondTile.hasDiamond = true;
-        console.log('💎 Diamante colocado en nivel', level);
+        /* debug */
     }
 }
 
@@ -5697,10 +5830,10 @@ function placeCoins() {
     
     // Log para debugging
     const actualCoinsPlaced = candidates.filter(idx => grid[idx].hasCoin).length;
-    console.log(`Monedas colocadas: ${actualCoinsPlaced}`);
+    /* debug */
     if (currentMission && currentMission.type === 'coins') {
         const actualCoinsPlaced = grid.filter(t => t && t.hasCoin).length;
-        console.log(`Misión requiere: ${currentMission.target}, Monedas disponibles: ${actualCoinsPlaced}`);
+        /* debug */
     }
 
     // --- ESTRELLAS (Nivel 30+) ---
@@ -6329,7 +6462,7 @@ function addSpecials(features) {
             }
         }
 
-        console.log(`Misión chain_boosts: Colocados ${boostsPlaced} aceleradores para target ${currentMission.target}`);
+        /* debug */
     }
     
     // Colocar features normales
@@ -6721,7 +6854,7 @@ function playChestVideo() {
         };
 
         video.play().catch(e => {
-            console.log("Autoplay bloqueado o error", e);
+            /* debug */
             finishChestOpening(); // Si falla, abrir directamente
         });
     } else {
@@ -7372,7 +7505,7 @@ function actuallyStartCar() {
             // Caso MP3
             if (engineAudio && !useProcedural) {
                 if (engineAudio.paused && soundEnabled) {
-                    engineAudio.play().catch(e => console.log('Audio play error:', e));
+                    engineAudio.play().catch(() => {});
                 }
             }
             // Caso Procedural: Ya suena de fondo, pero podríamos modular el pitch aquí según velocidad
@@ -7641,7 +7774,7 @@ function gameLoop() {
         if (tile?.hasDiamond) {
             tile.hasDiamond = false;
             diamondsCollected++;
-            localStorage.setItem('diamondsCollected', diamondsCollected.toString());
+            saveGameData();
             playSound('money');
             // Actualizar display
             const diamondDisplay = $('diamondDisplay');
@@ -8129,10 +8262,12 @@ function nextLevel() {
         return;
     }
     level++;
+    if (bestLevel < level) bestLevel = level;
     if (level === 3) {
         tutorialCompleted = true;
     }
     saveGameData();
+    updateBestRecordUI();
     hideGameModal();
     generateLevel();
 }
@@ -8325,7 +8460,7 @@ function initializePuzzle() {
     img.crossOrigin = "anonymous"; // Para evitar problemas CORS
     
     img.onload = function() {
-        console.log('Imagen del rompecabezas cargada correctamente');
+        /* debug */
         // Crear las 9 piezas
         for (let row = 0; row < 3; row++) {
             for (let col = 0; col < 3; col++) {
@@ -8352,7 +8487,7 @@ function initializePuzzle() {
     
     img.onerror = function(e) {
         console.error('Error cargando imagen del rompecabezas:', e);
-        console.log('Usando colores de respaldo para el rompecabezas');
+        /* debug */
         // Si la imagen no carga, usar colores simples
         for (let row = 0; row < 3; row++) {
             for (let col = 0; col < 3; col++) {
@@ -8374,7 +8509,7 @@ function initializePuzzle() {
     // Intentar cargar la imagen con timeout
     setTimeout(() => {
         if (puzzlePieces.length === 0) {
-            console.log('Timeout de carga de imagen, usando colores de respaldo');
+            /* debug */
             img.onerror();
         }
     }, 3000); // 3 segundos de timeout
@@ -9132,6 +9267,19 @@ function draw() {
     // Dibujar solo tiles visibles
     for (let i = 0; i < grid.length; i++) {
         if (grid[i]) drawTile(grid[i]);
+    }
+
+    // Cursor de teclado (no afecta el toque)
+    if (gameState === 'EDITING' && keyboardCursor.visible) {
+        ensureKeyboardCursor();
+        const kx = keyboardCursor.col * TILE_SIZE;
+        const ky = keyboardCursor.row * TILE_SIZE;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.95)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([6, 4]);
+        ctx.strokeRect(kx + 3, ky + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+        ctx.restore();
     }
 
     if (SKY_DECOR_ENABLED) {
