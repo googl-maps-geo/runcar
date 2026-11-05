@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
@@ -33,12 +33,39 @@
             padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
         }
-        canvas {
-            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        canvas#gameCanvas {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.55);
             border-radius: 10px;
-            background-color: #1e293b;
+            background-color: #0b1220;
             border: 2px solid #334155;
-            cursor: pointer;
+            cursor: grab;
+            touch-action: none;
+            display: block;
+            image-rendering: auto;
+        }
+        canvas#gameCanvas:active { cursor: grabbing; }
+        #zoomControls {
+            position: absolute; right: 8px; bottom: 8px; z-index: 25;
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        #zoomControls button {
+            width: 46px; height: 46px; border-radius: 12px;
+            background: rgba(15,23,42,.92); border: 1px solid rgba(148,163,184,.5);
+            color: #f8fafc; font-size: 18px; font-weight: 800;
+            box-shadow: 0 6px 16px rgba(0,0,0,.35);
+        }
+        #rotateOnceHint {
+            position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+            z-index: 26; max-width: 92%;
+            background: rgba(15,23,42,.92); border: 1px solid #38bdf8;
+            color: #e0f2fe; font-size: 13px; font-weight: 700;
+            padding: 8px 12px; border-radius: 12px; text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,.35);
+        }
+        @media (max-width: 480px) {
+            #bottomControls .glass-btn { width: 46px !important; height: 46px !important; }
+            #btnStart { height: 52px !important; font-size: 15px !important; }
+            #levelHint { font-size: 12px !important; }
         }
         .btn-game { transition: all 0.1s; -webkit-tap-highlight-color: transparent; }
         .btn-game:active { transform: scale(0.95); }
@@ -897,7 +924,7 @@ function startNeonIntro() {
                 <button onclick="startGame()" class="btn-game play-btn-wrap mx-auto block scale-90" aria-label="PLAY">
                     <img src="play.png" alt="PLAY" class="play-img" />
                 </button>
-                <p class="text-slate-600 text-[8px]">v1.3</p>
+                <p class="text-slate-600 text-[8px]">v1.4</p>
             </div>
         </div>
     </div>
@@ -938,8 +965,14 @@ function startNeonIntro() {
         </div>
 
         <!-- Game Area - Flex-1, Min-Height 0 para forzar scroll interno y no expandir contenedor padre -->
-        <div class="relative p-1 overflow-y-auto overflow-x-hidden w-full flex justify-center items-start flex-1 min-h-0 bg-slate-900/30" id="gameContainer">
+        <div class="relative p-0 overflow-hidden w-full flex justify-center items-center flex-1 min-h-0 bg-slate-900/40" id="gameContainer">
             <canvas id="gameCanvas"></canvas>
+            <div id="zoomControls">
+                <button type="button" onclick="cameraZoomIn()" title="Acercar">＋</button>
+                <button type="button" onclick="cameraZoomOut()" title="Alejar">－</button>
+                <button type="button" id="btnZoomToggle" onclick="toggleCameraOverview()" title="Vista completa / cerca">🔎</button>
+            </div>
+            <div id="rotateOnceHint" class="hidden">👆 Toca una ficha de calle para <b>girarla</b> y armar la ruta</div>
             
             <!-- Mensaje de salida del pedido -->
             <div id="orderReady" class="order-ready hidden">
@@ -2539,15 +2572,17 @@ for (let i = 1; i <= 100; i++) {
         cols: 10, 
         rows: 12, 
         
-        // Tiempo ajustado
-        time: 40 + i * 2 + (isHard ? 0 : 10), 
+        // Tiempo ajustado (un poco más tenso)
+        time: 38 + i * 2 + (isHard ? 0 : 8), 
         
         // Velocidad aumenta (AJUSTADO: Más rápido para mayor reto)
-        speed: Math.min(2.8 + i * 0.02, 5.5),
+        speed: Math.min(2.95 + i * 0.028, 5.8),
         
         // Obstáculos y callejones sin salida aumentan drásticamente en niveles altos
-        obstacles: Math.min(Math.floor(i / 4) + (isHard ? 3 : 0), 12),
-        deadEnds: Math.min(2 + Math.floor(i / 3) + (isHard ? 4 : 0), 15),
+        obstacles: Math.min(Math.floor(i / 3.5) + (isHard ? 4 : 1), 14),
+        deadEnds: Math.min(2 + Math.floor(i / 2.8) + (isHard ? 5 : 1), 16),
+        // Tráfico visual / presión (para feedback y futuros spawns)
+        traffic: Math.min(Math.floor(i / 8) + (isHard ? 2 : 0), 6),
         
         // Características acumulativas
         features: i >= 5 ? 
@@ -2580,7 +2615,26 @@ for (let i = 1; i <= 100; i++) {
     LEVEL_CONFIG.push(levelData);
 }
 
-let TILE_SIZE = 55, COLS = 6, ROWS = 7;
+let TILE_SIZE = 84, COLS = 6, ROWS = 7;
+let viewW = 390, viewH = 520, canvasDpr = 1;
+let camera = {
+    x: 0, y: 0, zoom: 1,
+    targetX: 0, targetY: 0, targetZoom: 1,
+    fitZoom: 1, driveZoom: 1.25, editZoom: 1.1,
+    overview: false, initialized: false
+};
+let fxParticles = [];
+let deliveryCombo = parseInt(localStorage.getItem('deliveryRush_combo') || '0', 10) || 0;
+let levelMoves = 0;
+let levelStarRating = 0;
+let rotatePieceHintShown = false; // una sola pista de girar ficha por jugador
+let pointerGesture = {
+    mode: null, id: null, startX: 0, startY: 0, lastX: 0, lastY: 0,
+    moved: false, pointers: new Map(), startDist: 0, startZoom: 1, startCamX: 0, startCamY: 0
+};
+function worldWidth() { return COLS * TILE_SIZE; }
+function worldHeight() { return ROWS * TILE_SIZE; }
+function clampNum(v, a, b) { return Math.max(a, Math.min(b, v)); }
 let floatingTexts = []; // Variable global para textos flotantes
 let editRenderId = null; // Loop de render en modo edición
 let previewAnimIndexFloat = 0; // Índice flotante para crecimiento progresivo de la línea amarilla
@@ -3007,6 +3061,7 @@ function saveGameData() {
         bestLevel: bestLevel,
         totalMoney: totalMoney,
         diamondsCollected: diamondsCollected,
+        rotatePieceHintShown: !!rotatePieceHintShown,
         tutorialCompleted: tutorialCompleted,
         totalStars: totalStars, // Guardar estrellas
         premiumMotoUnlocked: premiumMotoUnlocked,
@@ -3117,6 +3172,11 @@ function loadGameData(playerName) {
             // Cargar estado del tutorial
             if (gameData.tutorialCompleted !== undefined) {
                 tutorialCompleted = gameData.tutorialCompleted;
+            }
+            rotatePieceHintShown = !!gameData.rotatePieceHintShown;
+            if (rotatePieceHintShown) {
+                const h = $('rotateOnceHint');
+                if (h) h.classList.add('hidden');
             }
 
             // Cargar estrellas
@@ -3749,6 +3809,8 @@ function endTutorial() {
     // Si NO estamos jugando (ej: el paso final lanzó el juego), volver al menú o nivel 1 normal
     if (gameState !== 'RUNNING' && gameState !== 'CRASHED' && gameState !== 'WON') {
         generateLevel(false);
+    } else if (gameState === 'EDITING') {
+        setTimeout(() => showRotatePieceHintOnce(), 600);
     }
 }
 
@@ -3831,19 +3893,17 @@ function highlightElement(element) {
         // Calcular posición real basada en el tamaño renderizado del canvas vs tamaño lógico
         const canvasRect = canvas.getBoundingClientRect();
         
-        // Factor de escala (si el canvas se encoge por CSS object-fit o max-width)
-        // canvas.width es el tamaño del buffer (COLS * TILE_SIZE)
-        // canvasRect.width es el tamaño en pantalla (incluye zoom del navegador)
-        const scaleX = canvasRect.width / canvas.width;
-        const scaleY = canvasRect.height / canvas.height;
-        
         const col = parseInt(element.dataset.col);
         const row = parseInt(element.dataset.row);
-        
-        // Coordenadas en pantalla
-        const tileScreenX = canvasRect.left + (col * TILE_SIZE * scaleX);
-        const tileScreenY = canvasRect.top + (row * TILE_SIZE * scaleY);
-        const tileScreenSize = TILE_SIZE * scaleX; // Asumiendo aspecto cuadrado
+        const wx = col * TILE_SIZE + TILE_SIZE / 2;
+        const wy = row * TILE_SIZE + TILE_SIZE / 2;
+        const sx = viewW / 2 + (wx - camera.x) * camera.zoom;
+        const sy = viewH / 2 + (wy - camera.y) * camera.zoom;
+        const scaleX = canvasRect.width / Math.max(1, viewW);
+        const scaleY = canvasRect.height / Math.max(1, viewH);
+        const tileScreenSize = TILE_SIZE * camera.zoom * scaleX;
+        const tileScreenX = canvasRect.left + sx * scaleX - tileScreenSize / 2;
+        const tileScreenY = canvasRect.top + sy * scaleY - tileScreenSize / 2;
         
         spotlight.style.left = (tileScreenX - 5) + 'px';
         spotlight.style.top = (tileScreenY - 5) + 'px';
@@ -3921,9 +3981,123 @@ function init() {
     */
 
     window.addEventListener('resize', () => { if (gameState !== 'START') { resize(); draw(); } });
-    canvas.addEventListener('pointerdown', handleClick);
+    setupCameraPointers();
     window.addEventListener('keydown', handleKeyDown);
     updateBestRecordUI();
+}
+
+function setupCameraPointers() {
+    canvas.style.touchAction = 'none';
+    canvas.addEventListener('pointerdown', onCanvasPointerDown);
+    canvas.addEventListener('pointermove', onCanvasPointerMove);
+    canvas.addEventListener('pointerup', onCanvasPointerUp);
+    canvas.addEventListener('pointercancel', onCanvasPointerUp);
+    canvas.addEventListener('wheel', onCanvasWheel, { passive: false });
+}
+
+function pointerDist(a, b) {
+    const dx = a.x - b.x, dy = a.y - b.y;
+    return Math.hypot(dx, dy);
+}
+
+function onCanvasPointerDown(e) {
+    initAudio();
+    canvas.setPointerCapture?.(e.pointerId);
+    pointerGesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointerGesture.pointers.size === 2) {
+        const pts = [...pointerGesture.pointers.values()];
+        pointerGesture.pinching = true;
+        pointerGesture.mode = 'pinch';
+        pointerGesture.startDist = pointerDist(pts[0], pts[1]) || 1;
+        pointerGesture.startZoom = camera.zoom;
+        pointerGesture.moved = true;
+        return;
+    }
+    pointerGesture.mode = 'tap';
+    pointerGesture.id = e.pointerId;
+    pointerGesture.startX = e.clientX;
+    pointerGesture.startY = e.clientY;
+    pointerGesture.lastX = e.clientX;
+    pointerGesture.lastY = e.clientY;
+    pointerGesture.moved = false;
+    pointerGesture.startCamX = camera.x;
+    pointerGesture.startCamY = camera.y;
+    pointerGesture.pinching = false;
+}
+
+function onCanvasPointerMove(e) {
+    if (!pointerGesture.pointers.has(e.pointerId) && pointerGesture.mode !== 'pinch') return;
+    if (pointerGesture.pointers.has(e.pointerId)) {
+        pointerGesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    if (pointerGesture.pointers.size >= 2 || pointerGesture.mode === 'pinch') {
+        const pts = [...pointerGesture.pointers.values()];
+        if (pts.length >= 2) {
+            const dist = pointerDist(pts[0], pts[1]) || 1;
+            if (!pointerGesture.startDist) pointerGesture.startDist = dist;
+            const factor = dist / pointerGesture.startDist;
+            camera.overview = false;
+            camera.targetZoom = clampNum(pointerGesture.startZoom * factor, camera.fitZoom * 0.85, 3.2);
+            camera.zoom = camera.targetZoom;
+            clampCamera();
+            draw();
+            pointerGesture.moved = true;
+        }
+        return;
+    }
+    if (pointerGesture.mode === 'tap' || pointerGesture.mode === 'pan') {
+        const dx = e.clientX - pointerGesture.startX;
+        const dy = e.clientY - pointerGesture.startY;
+        if (!pointerGesture.moved && Math.hypot(dx, dy) > 10) {
+            pointerGesture.mode = 'pan';
+            pointerGesture.moved = true;
+            camera.overview = false;
+        }
+        if (pointerGesture.mode === 'pan' && gameState === 'EDITING') {
+            camera.targetX = pointerGesture.startCamX - dx / camera.zoom;
+            camera.targetY = pointerGesture.startCamY - dy / camera.zoom;
+            camera.x = camera.targetX;
+            camera.y = camera.targetY;
+            clampCamera();
+            draw();
+        }
+    }
+}
+
+function onCanvasPointerUp(e) {
+    pointerGesture.pointers.delete(e.pointerId);
+    if (pointerGesture.pointers.size >= 2) return;
+    if (pointerGesture.pointers.size === 1) {
+        // salir de pinch a pan potencial
+        pointerGesture.mode = 'pan';
+        pointerGesture.pinching = false;
+        return;
+    }
+    const wasTap = pointerGesture.mode === 'tap' && !pointerGesture.moved;
+    const x = e.clientX, y = e.clientY;
+    pointerGesture.mode = null;
+    pointerGesture.pinching = false;
+    pointerGesture.moved = false;
+    if (wasTap) {
+        handleClick({ clientX: x, clientY: y });
+    }
+}
+
+function onCanvasWheel(e) {
+    if (gameState !== 'EDITING' && gameState !== 'RUNNING') return;
+    e.preventDefault();
+    const before = screenToWorld(e.clientX, e.clientY);
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    camera.overview = false;
+    camera.targetZoom = clampNum(camera.zoom * factor, camera.fitZoom * 0.85, 3.2);
+    camera.zoom = camera.targetZoom;
+    // zoom hacia el cursor
+    const after = screenToWorld(e.clientX, e.clientY);
+    camera.x += before.x - after.x;
+    camera.y += before.y - after.y;
+    camera.targetX = camera.x; camera.targetY = camera.y;
+    clampCamera();
+    draw();
 }
 
 // Variable global para persistencia de misiones
@@ -4396,7 +4570,7 @@ function showMissionSuccess() {
         
         // Texto flotante
         floatingTexts.push({
-            x: canvas.width / 2,
+            x: worldWidth() / 2,
             y: 50,
             text: '✅ ¡MISIÓN CUMPLIDA!',
             color: '#10b981',
@@ -4414,7 +4588,7 @@ function createSuccessAnimation() {
     for (let i = 0; i < 10; i++) {
         setTimeout(() => {
             floatingTexts.push({
-                x: Math.random() * canvas.width,
+                x: Math.random() * worldWidth(),
                 y: Math.random() * 100 + 50,
                 text: ['🎉', '⭐', '✨', '🏆', '💎'][Math.floor(Math.random() * 5)],
                 color: '#fbbf24',
@@ -4930,6 +5104,8 @@ function generateLevel(showLoading = true) {
     checkConnections();
 
     // Ajuste visual y dibujado
+    levelMoves = 0;
+    levelStarRating = 0;
     resize();
     draw();
     startEditRender();
@@ -4943,44 +5119,204 @@ function generateLevel(showLoading = true) {
             lvlLoading.classList.add('hidden');
         });
     }
+
+    // Pista de girar: se muestra al cerrar el banner/modal de misión (closeMissionModal)
 }
 
 function resize() {
     const config = LEVEL_CONFIG[Math.min(level - 1, 99)];
     COLS = config.cols; ROWS = config.rows;
-    
-    // Obtener dimensiones del contenedor
+
     const container = $('gameContainer');
-    const availableW = container ? container.clientWidth : window.innerWidth;
-    const availableH = container ? container.clientHeight : window.innerHeight;
-    
-    // Ajuste de márgenes
-    const margin = 4; // Margen mínimo
-    
-    // Calcular tamaño ideal para que quepa TODO el mapa sin scroll si es posible
-    const fitWidth = (availableW - margin * 2) / COLS;
-    const fitHeight = (availableH - margin * 2) / ROWS;
-    
-    // Usar el menor para que quepa en ambos ejes (Fit to Screen)
-    let idealTileSize = Math.floor(Math.min(fitWidth, fitHeight));
-    
-    // LÍMITES INTELIGENTES:
-    // Nunca bajar de 22px (muy pequeño pero visible) para niveles enormes (ej. 20x20)
-    // Nunca subir de 60px (muy grande) para niveles iniciales
-    const MIN_TILE_SIZE = 32;
-    const MAX_TILE_SIZE = 60;
-    
-    // Aplicar límites
-    // Si idealTileSize < MIN_TILE_SIZE, se usará MIN y habrá scroll natural del div gameContainer
-    TILE_SIZE = Math.min(Math.max(idealTileSize, MIN_TILE_SIZE), MAX_TILE_SIZE);
+    viewW = Math.max(280, container ? container.clientWidth : window.innerWidth);
+    viewH = Math.max(280, container ? container.clientHeight : Math.floor(window.innerHeight * 0.55));
 
-    canvas.width = COLS * TILE_SIZE; 
-    canvas.height = ROWS * TILE_SIZE;
+    // Tiles grandes y legibles en móvil (~4–5 calles visibles de ancho con zoom de juego)
+    const phone = viewW < 500;
+    TILE_SIZE = phone ? 88 : 76;
 
-    // Reposicionar carro
+    canvasDpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(viewW * canvasDpr);
+    canvas.height = Math.round(viewH * canvasDpr);
+    canvas.style.width = viewW + 'px';
+    canvas.style.height = viewH + 'px';
+    ctx.setTransform(canvasDpr, 0, 0, canvasDpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const ww = worldWidth(), wh = worldHeight();
+    camera.fitZoom = Math.min(viewW / ww, viewH / wh) * 0.98;
+    // Zoom de conducción: ~3.5 tiles de ancho (moto/calles legibles en 390px)
+    camera.driveZoom = Math.max(camera.fitZoom * 1.85, viewW / (TILE_SIZE * 3.5));
+    // Zoom de edición: ~4.0 tiles (pinch puede abrir más)
+    camera.editZoom = Math.max(camera.fitZoom * 1.55, viewW / (TILE_SIZE * 4.0));
+
+    if (!camera.initialized) {
+        camera.zoom = camera.editZoom;
+        camera.targetZoom = camera.editZoom;
+        camera.x = ww / 2;
+        camera.y = wh / 2;
+        camera.targetX = camera.x;
+        camera.targetY = camera.y;
+        camera.initialized = true;
+    }
+
     if (car) {
         car.x = car.col * TILE_SIZE + TILE_SIZE / 2;
         car.y = car.row * TILE_SIZE + TILE_SIZE / 2;
+        if (gameState === 'RUNNING') {
+            camera.targetX = car.x; camera.targetY = car.y;
+            camera.targetZoom = camera.driveZoom;
+        }
+    }
+    clampCamera();
+}
+
+function clampCamera() {
+    const halfW = viewW / (2 * Math.max(0.01, camera.zoom));
+    const halfH = viewH / (2 * Math.max(0.01, camera.zoom));
+    const ww = worldWidth(), wh = worldHeight();
+    if (ww * camera.zoom <= viewW) camera.x = ww / 2;
+    else camera.x = clampNum(camera.x, halfW, ww - halfW);
+    if (wh * camera.zoom <= viewH) camera.y = wh / 2;
+    else camera.y = clampNum(camera.y, halfH, wh - halfH);
+    camera.targetX = clampNum(camera.targetX, (ww * camera.zoom <= viewW) ? ww/2 : halfW, (ww * camera.zoom <= viewW) ? ww/2 : ww - halfW);
+    camera.targetY = clampNum(camera.targetY, (wh * camera.zoom <= viewH) ? wh/2 : halfH, (wh * camera.zoom <= viewH) ? wh/2 : wh - halfH);
+}
+
+function applyCameraTransform() {
+    ctx.setTransform(
+        canvasDpr * camera.zoom, 0, 0, canvasDpr * camera.zoom,
+        canvasDpr * (viewW / 2 - camera.x * camera.zoom),
+        canvasDpr * (viewH / 2 - camera.y * camera.zoom)
+    );
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+}
+
+/** Dibuja un sprite en coords de mundo pero rasterizado a píxeles de dispositivo enteros (más nítido). */
+function drawWorldImageCrisp(img, wx, wy, ww, wh) {
+    if (!img || !img.complete || img.naturalWidth <= 0) return false;
+    const sx = (viewW / 2 + (wx - camera.x) * camera.zoom) * canvasDpr;
+    const sy = (viewH / 2 + (wy - camera.y) * camera.zoom) * canvasDpr;
+    const sw = ww * camera.zoom * canvasDpr;
+    const sh = wh * camera.zoom * canvasDpr;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    const dx = Math.round(sx);
+    const dy = Math.round(sy);
+    const dw = Math.max(1, Math.round(sw));
+    const dh = Math.max(1, Math.round(sh));
+    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
+    ctx.restore();
+    return true;
+}
+
+function updateCamera(dtSec) {
+    const t = clampNum((dtSec || 0.016) * 8, 0, 1); // smooth follow
+    if (gameState === 'RUNNING' && car) {
+        camera.targetX = car.x;
+        camera.targetY = car.y;
+        if (!camera.overview) camera.targetZoom = camera.driveZoom;
+    } else if (gameState === 'EDITING') {
+        if (!camera.overview) {
+            // mantener editZoom salvo pinch del usuario
+            if (Math.abs(camera.targetZoom - camera.driveZoom) < 0.001) {
+                camera.targetZoom = camera.editZoom;
+            }
+        } else {
+            camera.targetZoom = camera.fitZoom;
+            camera.targetX = worldWidth() / 2;
+            camera.targetY = worldHeight() / 2;
+        }
+    }
+    camera.x += (camera.targetX - camera.x) * t;
+    camera.y += (camera.targetY - camera.y) * t;
+    camera.zoom += (camera.targetZoom - camera.zoom) * Math.min(1, t * 1.2);
+    clampCamera();
+}
+
+function screenToWorld(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = clientX - rect.left;
+    const sy = clientY - rect.top;
+    return {
+        x: camera.x + (sx - viewW / 2) / camera.zoom,
+        y: camera.y + (sy - viewH / 2) / camera.zoom
+    };
+}
+
+function cameraZoomIn() {
+    camera.overview = false;
+    camera.targetZoom = clampNum(camera.targetZoom * 1.2, camera.fitZoom * 0.9, 3.2);
+    if (gameState === 'EDITING' && car) { camera.targetX = car.x; camera.targetY = car.y; }
+    clampCamera(); draw();
+}
+function cameraZoomOut() {
+    camera.targetZoom = clampNum(camera.targetZoom / 1.2, camera.fitZoom * 0.85, 3.2);
+    if (camera.targetZoom <= camera.fitZoom * 1.05) camera.overview = true;
+    clampCamera(); draw();
+}
+function toggleCameraOverview() {
+    camera.overview = !camera.overview;
+    if (camera.overview) {
+        camera.targetZoom = camera.fitZoom;
+        camera.targetX = worldWidth() / 2;
+        camera.targetY = worldHeight() / 2;
+    } else {
+        camera.targetZoom = (gameState === 'RUNNING') ? camera.driveZoom : camera.editZoom;
+        if (car) { camera.targetX = car.x; camera.targetY = car.y; }
+    }
+    const btn = $('btnZoomToggle');
+    if (btn) btn.textContent = camera.overview ? '🗺' : '🔎';
+    draw();
+}
+
+let rotatePieceHintPending = false;
+function showRotatePieceHintOnce() {
+    if (rotatePieceHintShown || rotatePieceHintPending || tutorialActive) return;
+    const el = $('rotateOnceHint');
+    if (!el) return;
+    rotatePieceHintPending = true;
+    el.classList.remove('hidden');
+    setTimeout(() => {
+        el.classList.add('hidden');
+        rotatePieceHintShown = true;
+        rotatePieceHintPending = false;
+        saveGameData();
+    }, 4500);
+}
+
+function spawnFx(x, y, kind) {
+    const n = kind === 'coin' ? 10 : 14;
+    for (let i = 0; i < n; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 0.8 + Math.random() * 2.2;
+        fxParticles.push({
+            x, y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd - 1.2,
+            life: 28 + Math.random() * 18,
+            color: kind === 'coin' ? '#fbbf24' : '#34d399',
+            size: 2 + Math.random() * 3
+        });
+    }
+}
+
+function drawFxParticles() {
+    if (!fxParticles.length) return;
+    for (let i = fxParticles.length - 1; i >= 0; i--) {
+        const p = fxParticles[i];
+        p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life--;
+        ctx.globalAlpha = Math.max(0, p.life / 40);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        if (p.life <= 0) fxParticles.splice(i, 1);
     }
 }
 
@@ -5084,14 +5420,13 @@ function handleClick(e) {
         clickX = (col + 0.5) * TILE_SIZE;
         clickY = (row + 0.5) * TILE_SIZE;
     } else {
-        const rect = canvas.getBoundingClientRect();
-        clickX = e.clientX - rect.left; clickY = e.clientY - rect.top;
+        const w = screenToWorld(e.clientX, e.clientY);
+        clickX = w.x; clickY = w.y;
         if (car) {
             const carDist = Math.sqrt((clickX - car.x) ** 2 + (clickY - car.y) ** 2);
-            if (carDist < TILE_SIZE * 0.5 || isRotateHintHit(clickX, clickY)) { rotateCar(); return; }
+            if (carDist < TILE_SIZE * 0.55 || isRotateHintHit(clickX, clickY)) { rotateCar(); return; }
         }
         col = Math.floor(clickX / TILE_SIZE); row = Math.floor(clickY / TILE_SIZE);
-        // Sincronizar cursor de teclado con el toque
         if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
             keyboardCursor.col = col;
             keyboardCursor.row = row;
@@ -5154,8 +5489,16 @@ function handleClick(e) {
             // Modo normal: rotar pieza
             tile.rotation = (tile.rotation + 1) % 4;
             lastEditedTile = { col, row };
+            levelMoves++;
             rotateTileHintCooldownUntil = Date.now() + 700;
             playSound('rotate');
+            // Ocultar la pista única al primer giro
+            const once = $('rotateOnceHint');
+            if (once && !once.classList.contains('hidden')) {
+                once.classList.add('hidden');
+                rotatePieceHintShown = true;
+                saveGameData();
+            }
             checkConnections();
             draw();
             
@@ -6639,8 +6982,8 @@ function calculatePreviewPath() {
             const delta = DIR_DELTA[currentFacingDir];
             const rawX = startX + delta.dc * TILE_SIZE;
             const rawY = startY + delta.dr * TILE_SIZE;
-            const endX = Math.max(0, Math.min(canvas.width, rawX));
-            const endY = Math.max(0, Math.min(canvas.height, rawY));
+            const endX = Math.max(0, Math.min(worldWidth(), rawX));
+            const endY = Math.max(0, Math.min(worldHeight(), rawY));
             previewPath = [
                 { x: startX, y: startY, isEnd: false },
                 { x: endX, y: endY, isEnd: false }
@@ -7184,6 +7527,9 @@ function closeMissionModal() {
     if (!modal) {
         startCountdown();
         playSound('start');
+        setTimeout(() => {
+            if (!tutorialActive && gameState === 'EDITING') showRotatePieceHintOnce();
+        }, 500);
         return;
     }
     
@@ -7202,6 +7548,10 @@ function closeMissionModal() {
     
     // Opcional: Sonido cuando inicia el cronómetro
     playSound('start');
+
+    setTimeout(() => {
+        if (!tutorialActive && gameState === 'EDITING') showRotatePieceHintOnce();
+    }, 500);
 }
 
 // Nueva función para mostrar información de la misión actual
@@ -7760,6 +8110,7 @@ function gameLoop() {
         // RECOLECTAR MONEDA
         if (tile?.hasCoin) {
             tile.hasCoin = false;
+            spawnFx(car.x, car.y, 'coin');
             
             // ANTES: solo sumaba. AHORA: Llama a la animación que a su vez suma.
             animateCoinCollection(car.x, car.y, 1);
@@ -8326,11 +8677,9 @@ function animateCoinCollection(x, y, amount) {
     const container = $('coin-animation-container');
     if (!container) return;
 
-    // Coordenadas de pantalla desde coordenadas de canvas
-    const scaleX = canvasRect.width / canvas.width;
-    const scaleY = canvasRect.height / canvas.height;
-    const startScreenX = canvasRect.left + x * scaleX;
-    const startScreenY = canvasRect.top + y * scaleY;
+    // Mundo -> pantalla con cámara
+    const startScreenX = canvasRect.left + (viewW / 2 + (x - camera.x) * camera.zoom) * (canvasRect.width / viewW);
+    const startScreenY = canvasRect.top + (viewH / 2 + (y - camera.y) * camera.zoom) * (canvasRect.height / viewH);
 
     // Coordenadas destino
     const moneyRect = moneyEl.getBoundingClientRect();
@@ -8858,8 +9207,20 @@ function showVictoryOverlay(deliveryTime) {
     // --- NUEVO: Bono por Mayor Armado (Complejidad de Ruta) ---
     // Si la ruta tiene 14 pasos o más, se considera un armado complejo
     const complexityBonus = (plannedRoute && plannedRoute.length >= 14) ? 50 : 0;
+
+    // Valoración 1–3 estrellas (giros + tiempo + combo)
+    const moveBudget = Math.max(8, Math.floor(COLS * ROWS * 0.22));
+    let stars = 1;
+    if (levelMoves <= moveBudget * 1.6 && timeUsedRatio <= 0.85) stars = 2;
+    if (levelMoves <= moveBudget && timeUsedRatio <= 0.55) stars = 3;
+    if (halfTimeBonus > 0 && levelMoves <= moveBudget * 1.2) stars = Math.max(stars, 3);
+    levelStarRating = stars;
+    deliveryCombo = (stars >= 2) ? (deliveryCombo + 1) : 0;
+    try { localStorage.setItem('deliveryRush_combo', String(deliveryCombo)); } catch (e) {}
+    const comboBonus = Math.min(40, deliveryCombo * 5);
+    const starBonus = stars * 8;
     
-    const totalEarned = deliveryPayment + halfTimeBonus + timeBonus + complexityBonus;
+    const totalEarned = deliveryPayment + halfTimeBonus + timeBonus + complexityBonus + comboBonus + starBonus;
     totalMoney += totalEarned;
     
     // Actualizar display de dinero
@@ -8921,7 +9282,12 @@ function showVictoryOverlay(deliveryTime) {
     if (complexityBonus > 0) bonusText += `<span class="text-xs text-cyan-300">🏗️ Bono Constructor: +$${complexityBonus}</span><br>`;
     if (halfTimeBonus > 0) bonusText += `<span class="text-xs text-blue-300">⚡ Bono Velocidad: +$${halfTimeBonus}</span>`;
     
+    const starGlyphs = '⭐'.repeat(levelStarRating) + '☆'.repeat(Math.max(0, 3 - levelStarRating));
+    if (comboBonus > 0) bonusText += `${bonusText ? '<br>' : ''}<span class="text-xs text-amber-300">🔥 Combo x${deliveryCombo}: +$${comboBonus}</span>`;
+    if (starBonus > 0) bonusText += `${bonusText ? '<br>' : ''}<span class="text-xs text-yellow-300">⭐ Valoración: +$${starBonus}</span>`;
     statsDiv.innerHTML = `
+        <div class="text-2xl mb-1 tracking-wide" title="Valoración del nivel">${starGlyphs}</div>
+        <div class="text-[11px] text-slate-400 mb-2">Giros: ${levelMoves} · Combo: x${deliveryCombo}</div>
         <div class="flex gap-3">
             <div class="bg-slate-800/50 p-2 rounded-xl border border-slate-700 backdrop-blur text-center min-w-[100px]">
                 <div class="text-2xl mb-0.5">💰</div>
@@ -9154,16 +9520,16 @@ function getRoadTheme(lvl) {
 function initSkyDecor() {
     if (!SKY_DECOR_ENABLED) return;
     skyDecorReady = true;
-    skyDecorW = canvas.width;
-    skyDecorH = canvas.height;
+    skyDecorW = worldWidth();
+    skyDecorH = worldHeight();
     skyBirds = [];
     skyClouds = [];
 
     const birdCount = 3;
     for (let i = 0; i < birdCount; i++) {
         skyBirds.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height * 0.45,
+            x: Math.random() * worldWidth(),
+            y: Math.random() * worldHeight() * 0.45,
             speed: 12 + Math.random() * 18,
             scale: 0.6 + Math.random() * 0.6,
             phase: Math.random() * Math.PI * 2
@@ -9174,8 +9540,8 @@ function initSkyDecor() {
     for (let i = 0; i < cloudCount; i++) {
         const size = 50 + Math.random() * 80;
         skyClouds.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height * 0.35,
+            x: Math.random() * worldWidth(),
+            y: Math.random() * worldHeight() * 0.35,
             speed: 4 + Math.random() * 6,
             alpha: 0.18 + Math.random() * 0.12,
             w: size,
@@ -9186,7 +9552,7 @@ function initSkyDecor() {
 
 function ensureSkyDecor() {
     if (!SKY_DECOR_ENABLED) return;
-    if (!skyDecorReady || skyDecorW !== canvas.width || skyDecorH !== canvas.height) {
+    if (!skyDecorReady || skyDecorW !== worldWidth() || skyDecorH !== worldHeight()) {
         initSkyDecor();
     }
 }
@@ -9196,9 +9562,9 @@ function updateSkyDecor(deltaSec) {
     skyBirds.forEach(bird => {
         bird.x += bird.speed * deltaSec;
         bird.phase += deltaSec * 6;
-        if (bird.x > canvas.width + 40) {
+        if (bird.x > worldWidth() + 40) {
             bird.x = -40;
-            bird.y = Math.random() * canvas.height * 0.45;
+            bird.y = Math.random() * worldHeight() * 0.45;
             bird.speed = 12 + Math.random() * 18;
             bird.scale = 0.6 + Math.random() * 0.6;
         }
@@ -9207,8 +9573,8 @@ function updateSkyDecor(deltaSec) {
     skyClouds.forEach(cloud => {
         cloud.x -= cloud.speed * deltaSec;
         if (cloud.x < -cloud.w - 30) {
-            cloud.x = canvas.width + 30;
-            cloud.y = Math.random() * canvas.height * 0.35;
+            cloud.x = worldWidth() + 30;
+            cloud.y = Math.random() * worldHeight() * 0.35;
             cloud.speed = 4 + Math.random() * 6;
             cloud.alpha = 0.18 + Math.random() * 0.12;
         }
@@ -9251,9 +9617,18 @@ function drawSkyDecor() {
 function draw() {
     // Actualizar UI del velocímetro
     updateSpeedometer();
+    updateCamera(1/60);
 
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Fondo en espacio de pantalla
+    ctx.setTransform(canvasDpr, 0, 0, canvasDpr, 0, 0);
+    const bg = ctx.createLinearGradient(0, 0, 0, viewH);
+    bg.addColorStop(0, '#071525');
+    bg.addColorStop(0.55, '#0f172a');
+    bg.addColorStop(1, '#020617');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, viewW, viewH);
+
+    applyCameraTransform();
 
     if (SKY_DECOR_ENABLED) {
         ensureSkyDecor();
@@ -9264,7 +9639,7 @@ function draw() {
         updateSkyDecor(deltaSec);
     }
     
-    // Dibujar solo tiles visibles
+    // Dibujar tiles (mundo)
     for (let i = 0; i < grid.length; i++) {
         if (grid[i]) drawTile(grid[i]);
     }
@@ -9362,24 +9737,11 @@ function draw() {
         // }
     }
 
-    if (gameState === 'EDITING' && level === 1) {
-        const deliverHint = $('deliverHint');
-        const lastPoint = previewPath.length > 0 ? previewPath[previewPath.length - 1] : null;
-        const routeComplete = !!(lastPoint && lastPoint.isEnd);
-
-        if (deliverHint) {
-            if (routeComplete) deliverHint.classList.remove('hidden');
-            else deliverHint.classList.add('hidden');
-        }
-
-        if (!routeComplete && rotateHintDismissed && Date.now() > rotateTileHintCooldownUntil) {
-            const target = (previewPath.length > 1) ? lastPoint : getNearestRotatableTileCenter();
-            if (target) {
-                drawTileRotateHint(target.x + TILE_SIZE * 0.4, target.y);
-            }
-        }
-    }
+    // Pistas repetidas eliminadas: solo tutorial + una pista única de girar ficha
+    if ($('deliverHint')) $('deliverHint').classList.add('hidden');
     
+    drawFxParticles();
+
     // DIBUJAR TEXTOS FLOTANTES
     if (window.floatingTexts && window.floatingTexts.length > 0) {
         ctx.save();
@@ -9487,7 +9849,7 @@ function drawTile(tile) {
     const y = tile.row * TILE_SIZE;
     const cx = x + TILE_SIZE / 2;
     const cy = y + TILE_SIZE / 2;
-    const rw = TILE_SIZE * 0.45;
+    const rw = TILE_SIZE * 0.70;
     const h = rw / 2;
     const conn = tile.getConnections ? tile.getConnections() : tile.type.base;
     const theme = getRoadTheme(level);
@@ -9505,7 +9867,7 @@ function drawTile(tile) {
 
     if (tile.special === 'house') {
         const img = typeof tile.houseSpriteIndex === 'number' ? houseSprites[tile.houseSpriteIndex] : null;
-        const size = TILE_SIZE * 0.95;
+        const size = TILE_SIZE * 1.05;
         const drawX = cx - size * 0.5;
         const drawY = cy - size * 0.55;
         ctx.save();
@@ -9514,7 +9876,13 @@ function drawTile(tile) {
         ctx.ellipse(cx, cy + TILE_SIZE * 0.28, size * 0.32, size * 0.12, 0, 0, Math.PI * 2);
         ctx.fill();
         if (img && img.complete && img.naturalWidth > 0) {
-            ctx.drawImage(img, drawX, drawY, size, size * 0.85);
+            const destW = size;
+            const destH = size * 0.85;
+            drawWorldImageCrisp(img, drawX, drawY, destW, destH);
+            // Contorno para legibilidad en móvil (en espacio mundo)
+            ctx.strokeStyle = 'rgba(15,23,42,0.65)';
+            ctx.lineWidth = Math.max(1.8, TILE_SIZE * 0.035);
+            ctx.strokeRect(drawX + 1, drawY + 1, destW - 2, destH - 2);
         } else {
             drawVectorHouse(drawX, drawY, size * 0.9, { wall: '#f7c948', roof: '#e2574c', door: '#4caf6a', trim: '#a3a3a3', window: '#bfe3f8' }, 'center');
         }
@@ -9719,6 +10087,19 @@ function drawTile(tile) {
         
         ctx.stroke();
         ctx.shadowBlur = 0;
+
+        // Marcas viales de alto contraste
+        ctx.save();
+        ctx.clip(roadPath);
+        ctx.strokeStyle = 'rgba(255, 236, 150, 0.9)';
+        ctx.lineWidth = Math.max(2.2, TILE_SIZE * 0.04);
+        ctx.setLineDash([TILE_SIZE * 0.16, TILE_SIZE * 0.11]);
+        ctx.beginPath();
+        if (hasN || hasS) { ctx.moveTo(0, -TILE_SIZE/2 + 2); ctx.lineTo(0, TILE_SIZE/2 - 2); }
+        if (hasE || hasW) { ctx.moveTo(-TILE_SIZE/2 + 2, 0); ctx.lineTo(TILE_SIZE/2 - 2, 0); }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
         
         /* 
         Ya no necesitamos dibujar bordes especiales en los límites del mapa 
@@ -10360,7 +10741,7 @@ function drawEdgeHouses(tile, x, y, conn) {
         if (img && img.complete && img.naturalWidth > 0) {
             ctx.save();
             ctx.globalAlpha = 0.98;
-            ctx.drawImage(img, drawX, drawY, houseW, houseH);
+            drawWorldImageCrisp(img, drawX, drawY, houseW, houseH);
             ctx.restore();
         } else {
             drawVectorHouse(drawX, drawY, size, palette, side);
@@ -10493,79 +10874,12 @@ const vImgIndriver = new Image(); vImgIndriver.src = 'INDRIVER.png';
 const vImgServi = new Image(); vImgServi.src = 'SERVIENTREGA.png';
 
 function drawRotateHints() {
-    if (!car) return;
-    const pulse = 0.5 + Math.abs(Math.sin(Date.now() / 300));
-    const radius = TILE_SIZE * (0.65 + 0.06 * pulse);
-
-    ctx.save();
-    ctx.translate(car.x, car.y);
-    if (level <= 2 && !rotateHintDismissed) {
-        const arrowX = radius + 24;
-        ctx.strokeStyle = `rgba(16, 185, 129, ${0.9 + 0.08 * pulse})`;
-        ctx.fillStyle = `rgba(16, 185, 129, ${0.9 + 0.08 * pulse})`;
-        ctx.lineWidth = Math.max(5, Math.floor(TILE_SIZE * 0.08));
-        ctx.lineCap = 'round';
-
-        // Flecha apuntando al centro del vehiculo
-        ctx.beginPath();
-        ctx.moveTo(arrowX, 0);
-        ctx.lineTo(arrowX - 24, 0);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(arrowX - 24, 0);
-        ctx.lineTo(arrowX - 6, -11);
-        ctx.lineTo(arrowX - 6, 11);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = `rgba(16, 185, 129, ${0.9 + 0.08 * pulse})`;
-        ctx.font = `bold ${Math.max(14, Math.floor(TILE_SIZE * 0.3))}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
-        ctx.lineWidth = 3;
-        ctx.strokeText('Presiona aqui', arrowX, 12);
-        ctx.fillText('Presiona aqui', arrowX, 12);
-    }
-
-    ctx.restore();
+    // Sin flechas/textos repetidos durante la partida (pista única = rotateOnceHint)
+    return;
 }
 
-function drawTileRotateHint(x, y) {
-    const pulse = 0.5 + Math.abs(Math.sin(Date.now() / 260));
-    const arrowLen = Math.max(26, Math.floor(TILE_SIZE * 0.7));
+function drawTileRotateHint(x, y) { /* desactivado: pista única */ }
 
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.strokeStyle = `rgba(14, 165, 233, ${0.9 + 0.08 * pulse})`;
-    ctx.fillStyle = `rgba(14, 165, 233, ${0.9 + 0.08 * pulse})`;
-    ctx.lineWidth = Math.max(5, Math.floor(TILE_SIZE * 0.08));
-    ctx.lineCap = 'round';
-
-    ctx.beginPath();
-    ctx.moveTo(arrowLen, 0);
-    ctx.lineTo(0, 0);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(14, -11);
-    ctx.lineTo(14, 11);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = `rgba(14, 165, 233, ${0.9 + 0.08 * pulse})`;
-    ctx.font = `bold ${Math.max(15, Math.floor(TILE_SIZE * 0.32))}px sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.strokeStyle = 'rgba(15, 23, 42, 0.7)';
-    ctx.lineWidth = 3;
-    ctx.strokeText('Presiona una ficha para girarla', arrowLen + 6, 0);
-    ctx.fillText('Presiona una ficha para girarla', arrowLen + 6, 0);
-
-    ctx.restore();
-}
 
 function drawCar() {
     ctx.save();
@@ -10636,19 +10950,24 @@ function drawCar() {
         if (!img.complete || img.naturalWidth === 0) return false;
         
         const ratio = img.naturalWidth / img.naturalHeight;
-        let finalW = maxSize;
-        let finalH = maxSize;
+        let finalW = maxSize * 1.22; // más grande / legible en móvil
+        let finalH = maxSize * 1.22;
         
-        // Si es más ancho que alto
-        if (ratio > 1) {
-            finalH = maxSize / ratio;
-        } else {
-            // Si es más alto que ancho (o cuadrado)
-            finalW = maxSize * ratio;
-        }
+        if (ratio > 1) finalH = finalW / ratio;
+        else finalW = finalH * ratio;
         
-        // Dibujar centrado
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        // Halo claro + sombra oscura = contorno legible
+        ctx.save();
+        ctx.shadowColor = 'rgba(255,255,255,0.95)';
+        ctx.shadowBlur = Math.max(8, maxSize * 0.14);
         ctx.drawImage(img, -finalW / 2, -finalH / 2, finalW, finalH);
+        ctx.shadowColor = 'rgba(0,0,0,0.75)';
+        ctx.shadowBlur = Math.max(4, maxSize * 0.08);
+        ctx.shadowOffsetY = 2;
+        ctx.drawImage(img, -finalW / 2, -finalH / 2, finalW, finalH);
+        ctx.restore();
         return true;
     };
 
@@ -10682,36 +11001,36 @@ function drawCar() {
     if (selectedVehicle === 'motoa') {
         // MOTO PREMIUM (LEGACY): GIF animado
         ctx.scale(1, 1); 
-        if (!drawImageCentered(vImgMoto, 55)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgMoto, 72)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'moto') {
         // --- MOTO BÁSICA - AHORA USA LA IMAGEN motoa.gif ---
         ctx.scale(1, 1);
-        if (!drawImageCentered(vImgMoto, 55)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgMoto, 72)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'car') {
         // --- MOTO BÁSICA (REEMPLAZA AL AUTO) ---
         ctx.scale(1, 1);
-        if (!drawImageCentered(vImgMotoBasica, 55)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgMotoBasica, 72)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'trucka') {
         // CAMIONETA PREMIUM
         // Centrada y proporcional. Usamos un area un poco mas grande porque suelen ser largas
-        if (!drawImageCentered(vImgTruck, 65)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgTruck, 82)) drawFallbackVehicle();
         
     } else if (selectedVehicle === 'fulgoneta') {
         // FURGONETA (IMAGEN)
         // Tamaño de carros por defecto
-        if (!drawImageCentered(vImgFulgoneta, 55)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgFulgoneta, 72)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'moto1') {
-        if (!drawImageCentered(vImgMoto1, 55)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgMoto1, 72)) drawFallbackVehicle();
     } else if (selectedVehicle === 'uber') {
-        if (!drawImageCentered(vImgUber, 55)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgUber, 72)) drawFallbackVehicle();
     } else if (selectedVehicle === 'indriver') {
-        if (!drawImageCentered(vImgIndriver, 55)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgIndriver, 72)) drawFallbackVehicle();
     } else if (selectedVehicle === 'servi') {
-        if (!drawImageCentered(vImgServi, 60)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgServi, 76)) drawFallbackVehicle();
     } else if (selectedVehicle === 'truck') {
         // --- CAMIÓN DE REPARTO (VISTA PERFIL) ---
         // Se debe ver el lado largo de la caja
@@ -10779,7 +11098,7 @@ function drawCar() {
         // Escalado significativo (1.5x) para que se vea mucho más grande que los demás
         const scaleBig = 1.5;
         ctx.scale(scaleBig, scaleBig);
-        if (!drawImageCentered(vImgCamion, 75)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgCamion, 92)) drawFallbackVehicle();
         
     } else if (selectedVehicle === 'motoa') {
 
