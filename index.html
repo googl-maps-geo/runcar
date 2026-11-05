@@ -924,7 +924,7 @@ function startNeonIntro() {
                 <button onclick="startGame()" class="btn-game play-btn-wrap mx-auto block scale-90" aria-label="PLAY">
                     <img src="play.png" alt="PLAY" class="play-img" />
                 </button>
-                <p class="text-slate-600 text-[8px]">v1.5</p>
+                <p class="text-slate-600 text-[8px]">v1.6</p>
             </div>
         </div>
     </div>
@@ -2569,14 +2569,14 @@ for (let i = 1; i <= 100; i++) {
     
     const levelData = {
         // Mapas mas grandes para mostrar mas calles
-        cols: 10, 
-        rows: 12, 
+        cols: 6, 
+        rows: 7, 
         
         // Tiempo ajustado (un poco más tenso)
         time: 38 + i * 2 + (isHard ? 0 : 8), 
         
         // Velocidad aumenta (AJUSTADO: Más rápido para mayor reto)
-        speed: Math.min(9.8 + i * 0.15, 24),
+        speed: Math.min(4.9 + i * 0.075, 12),
         
         // Obstáculos y callejones sin salida aumentan drásticamente en niveles altos
         obstacles: Math.min(Math.floor(i / 3.5) + (isHard ? 4 : 1), 14),
@@ -5131,9 +5131,9 @@ function resize() {
     viewW = Math.max(280, container ? container.clientWidth : window.innerWidth);
     viewH = Math.max(280, container ? container.clientHeight : Math.floor(window.innerHeight * 0.55));
 
-    // Mapa fijo completo y claro en móvil 390px (10×12 tiles)
+    // Mapa fijo completo en móvil 390px (6×7 tiles de ~60-65px)
     const phone = viewW < 500;
-    TILE_SIZE = phone ? 34 : 46;
+    TILE_SIZE = phone ? 62 : 70;
 
     canvasDpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.round(viewW * canvasDpr);
@@ -9859,15 +9859,28 @@ function drawTile(tile) {
     const theme = getRoadTheme(level);
     
     ctx.save();
-    ctx.fillStyle = theme.tileBase; // Fondo oscuro
+    // Fondo: fichas girables se destacan con fondo más claro
+    const isRotatable = !tile.locked && tile.type !== TILE_TYPES.BLOCKED && tile.type !== TILE_TYPES.START && tile.type !== TILE_TYPES.END;
+    ctx.fillStyle = isRotatable ? 'rgba(30, 41, 59, 0.95)' : theme.tileBase;
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
     ctx.save();
-    ctx.strokeStyle = theme.tileBorder;
-    ctx.lineWidth = 1.2;
-    ctx.shadowColor = theme.tileShadow;
-    ctx.shadowBlur = 6;
-    ctx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+    // Borde más visible en fichas girables
+    ctx.strokeStyle = isRotatable ? '#38bdf8' : theme.tileBorder;
+    ctx.lineWidth = isRotatable ? 3 : 1.2;
+    ctx.shadowColor = isRotatable ? 'rgba(56, 189, 248, 0.6)' : theme.tileShadow;
+    ctx.shadowBlur = isRotatable ? 8 : 4;
+    ctx.strokeRect(x + 1.5, y + 1.5, TILE_SIZE - 3, TILE_SIZE - 3);
     ctx.restore();
+    // Pequeño ícono de giro en fichas girables
+    if (isRotatable && gameState === 'EDITING') {
+        ctx.save();
+        ctx.fillStyle = '#7dd3fc';
+        ctx.font = `bold ${Math.max(10, TILE_SIZE * 0.18)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('↻', x + TILE_SIZE - 10, y + 10);
+        ctx.restore();
+    }
 
     if (tile.special === 'house') {
         const img = typeof tile.houseSpriteIndex === 'number' ? houseSprites[tile.houseSpriteIndex] : null;
@@ -10003,8 +10016,8 @@ function drawTile(tile) {
         
         // --- LÓGICA DE DIBUJO DE CALLE MODIFICADA ---
 
-        // 1. Vereda/cordón más ancho detrás de la calle para que se vea el borde y césped cercano.
-        const curb = Math.max(2, Math.round(TILE_SIZE * 0.06));
+        // 1. Veredas claras a ambos lados del asfalto (gris claro / beige)
+        const curb = Math.max(5, Math.round(TILE_SIZE * 0.14));
         const sidewalkPath = new Path2D();
         const sw = rw + curb * 2;
         const sh = h + curb;
@@ -10012,8 +10025,12 @@ function drawTile(tile) {
         if (conn & DIR.S) sidewalkPath.rect(-sw / 2, -sh, sw, s/2 + sh);
         if (conn & DIR.E) sidewalkPath.rect(-sh, -sh, s/2 + sh, sw);
         if (conn & DIR.W) sidewalkPath.rect(-s/2, -sh, s/2 + sh, sw);
-        ctx.fillStyle = theme.curbColor;
+        ctx.fillStyle = '#e2e8f0'; // gris claro / beige
         ctx.fill(sidewalkPath);
+        // Borde exterior de la vereda para mejor contraste
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.5;
+        ctx.stroke(sidewalkPath);
 
         // 2. Dibuja la forma base de la carretera con la textura de pavimento.
         // Se usan solo rectángulos para formar una cruz nítida en las intersecciones, sin círculos.
@@ -10891,7 +10908,7 @@ function drawCar() {
     
     // ESCALADO MÁS PEQUEÑO: vehículos a escala de la calle (caben dentro del carril)
     // Base más alta = vehículos más chicos respecto al TILE_SIZE
-    const currentScale = TILE_SIZE / 95; 
+    const currentScale = TILE_SIZE / 78; 
     ctx.scale(currentScale, currentScale);
 
     // LÓGICA DE ROTACIÓN VISTA LATERAL (PERFIL):
@@ -10953,8 +10970,8 @@ function drawCar() {
         if (!img.complete || img.naturalWidth === 0) return false;
         
         const ratio = img.naturalWidth / img.naturalHeight;
-        let finalW = maxSize * 0.72; // más pequeño, a escala del carril
-        let finalH = maxSize * 0.72;
+        let finalW = maxSize * 0.85; // un poco más grande, pero sigue en el carril
+        let finalH = maxSize * 0.85;
         
         if (ratio > 1) finalH = finalW / ratio;
         else finalW = finalH * ratio;
@@ -11008,7 +11025,7 @@ function drawCar() {
     if (selectedVehicle === 'motoa') {
         // MOTO PREMIUM (LEGACY): GIF animado
         ctx.scale(1, 1); 
-        if (!drawImageCentered(vImgMoto, 42)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgMoto, 50)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'moto') {
         // --- MOTO BÁSICA - AHORA USA LA IMAGEN motoa.gif ---
@@ -11018,7 +11035,7 @@ function drawCar() {
     } else if (selectedVehicle === 'car') {
         // --- MOTO BÁSICA (REEMPLAZA AL AUTO) ---
         ctx.scale(1, 1);
-        if (!drawImageCentered(vImgMotoBasica, 42)) drawFallbackVehicle();
+        if (!drawImageCentered(vImgMotoBasica, 50)) drawFallbackVehicle();
 
     } else if (selectedVehicle === 'trucka') {
         // CAMIONETA PREMIUM
