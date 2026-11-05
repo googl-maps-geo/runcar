@@ -2,260 +2,483 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0b1425">
-<title>Delivery Rush — Entregas rápidas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>Delivery Rush - Entregas Rápidas</title>
 <style>
-:root{--bg:#081326;--panel:#17263d;--line:#58718e;--green:#08d477;--cyan:#08c9e8;--gold:#ffc928}
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#07101f;color:#f4f8ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:manipulation;user-select:none}
-body{display:flex;justify-content:center;align-items:stretch;background:radial-gradient(ellipse at 50% 35%,#172b46,#07101f 75%)}
-#app{width:min(100vw,480px);height:100dvh;min-height:550px;display:flex;flex-direction:column;padding:7px 8px max(8px,env(safe-area-inset-bottom));gap:6px}
-.top{display:grid;grid-template-columns:1.12fr 1.55fr .45fr;gap:6px;flex:0 0 auto}
-.panel{background:linear-gradient(145deg,#20334e,#101d32);border:2px solid #526b88;border-radius:15px;box-shadow:inset 0 1px 0 #ffffff26,0 4px 12px #0008;padding:7px 9px;min-width:0}
-.profile{display:grid;grid-template-columns:43px 1fr;gap:8px;align-items:center}
-.logo{width:40px;height:40px;border-radius:10px;background:#fff;display:grid;place-items:center;color:#e43b40;font-weight:1000;font-style:italic;font-size:10px}
-.name{font-weight:900;color:#35e59b;font-size:16px;line-height:1.1}
-.order{font-size:13px;color:#d7e2f3}
-.stats{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:800;margin-top:2px}
-.money{color:#ffd22d}.diamonds{color:#42b8ff}.energy{color:#ffce27}
-.mission{display:flex;align-items:center;gap:9px}
-.missionIcon{font-size:26px;color:#9fc7ed}
-.mission small{display:block;color:#48d7f0;font-weight:900;font-size:13px}
-.mission strong{display:block;color:#ff7e88;font-size:12px}
-.mission span{font-size:12px;color:#e5edf8;line-height:1.2}
-.timer{text-align:center;display:flex;flex-direction:column;justify-content:center;color:#5eafff;font-size:22px;font-weight:900}
-.timer small{font-size:19px}
-#mapWrap{position:relative;flex:1;min-height:0;border:2px solid #30445e;border-radius:17px;overflow:hidden;background:#101b2b;box-shadow:0 8px 20px #0008}
-#staticMap,#dynamicMap{position:absolute;inset:0;width:100%;height:100%;display:block}
-#dynamicMap{touch-action:pan-y}
-#rotateHint{position:absolute;top:5px;left:50%;transform:translateX(-50%);font-size:10px;color:#e9f3ff;background:#071525c9;border:1px solid #8aa6c7;border-radius:20px;padding:3px 8px;pointer-events:none;white-space:nowrap}
-.status{flex:0 0 auto;text-align:center;color:#aabbd0;font-size:13px;min-height:20px}
-.controls{display:grid;grid-template-columns:.75fr 1.45fr .9fr;gap:8px;align-items:center;flex:0 0 auto}
-.speed{height:66px;border-radius:15px;border:2px solid #536d8c;background:#101e32;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.speed:before{content:"";position:absolute;inset:5px 7px 17px;border-radius:100px 100px 8px 8px;border:5px solid transparent;border-top-color:#28df8c;border-left-color:#ffc52e;border-right-color:#ff5252}
-.speed label{font-size:10px;color:#b7c9dd;z-index:1;font-weight:800}.speed b{font-size:25px;line-height:1.1;z-index:1}
-#deliver{height:68px;border:0;border-radius:17px;background:linear-gradient(180deg,#0acb86,#009c68);box-shadow:0 5px 0 #006d51,0 7px 14px #0007;color:white;font-size:clamp(18px,5vw,25px);font-weight:1000;letter-spacing:.3px}
-#deliver:active{transform:translateY(3px);box-shadow:0 2px 0 #006d51}
-#deliver:disabled{opacity:.55}
-.music{height:66px;border:2px solid #526b88;border-radius:14px;background:#14243a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#c8d8eb;font-size:12px}
-.music div{display:flex;gap:9px;font-size:20px;color:#ffb32e}
-.bottom{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;flex:0 0 auto;padding-top:4px}
-.tool{aspect-ratio:1/1;max-height:58px;border:2px solid #04bfe9;clip-path:polygon(25% 0,75% 0,100% 25%,100% 75%,75% 100%,25% 100%,0 75%,0 25%);background:linear-gradient(145deg,#243e5d,#101d32);color:#fff;font-size:23px;display:grid;place-items:center;filter:drop-shadow(0 0 4px #00c9ff)}
-.tool:active{transform:scale(.94)}
-#toast{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);padding:7px 12px;background:#071525ed;border:1px solid #6d8eae;border-radius:20px;font-size:12px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s;z-index:4}
-#toast.show{opacity:1}
-#stars{font-size:14px;color:#ffcf36}
-@media(max-height:650px){#app{gap:4px;padding-top:4px}.panel{padding:5px 7px}.controls .speed,.music{height:54px}#deliver{height:56px}.tool{max-height:48px}.status{font-size:11px}}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: #0f172a; font-family: system-ui, -apple-system, sans-serif; color: white; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+#gameContainer { width: 100%; height: 100%; display: flex; flex-direction: column; max-width: 430px; margin: 0 auto; background: #0f172a; }
+#topBar { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: linear-gradient(180deg, #1e293b, #0f172a); border-bottom: 2px solid #334155; flex-shrink: 0; }
+.top-box { background: #1e293b; border-radius: 12px; padding: 6px 10px; border: 1px solid #475569; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.top-box .label { font-size: 10px; color: #94a3b8; }
+#playerInfo { min-width: 120px; }
+#missionBox { flex: 1; margin: 0 8px; text-align: center; background: #1e293b; border-radius: 12px; padding: 6px; border: 1px solid #475569; }
+#missionBox .title { color: #38bdf8; font-size: 12px; font-weight: 700; }
+#missionBox .text { font-size: 11px; color: #f8fafc; }
+#timerBox { background: #1e293b; border-radius: 12px; padding: 8px 12px; border: 1px solid #475569; text-align: center; min-width: 60px; }
+#timer { font-size: 28px; font-weight: 800; color: #38bdf8; }
+#canvasWrap { flex: 1; position: relative; overflow: hidden; background: #0b1220; }
+canvas { display: block; width: 100%; height: 100%; image-rendering: auto; }
+#bottomBar { background: #0f172a; border-top: 2px solid #334155; padding: 8px 10px; flex-shrink: 0; }
+#orderInfo { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+#orderInfo .box { background: #1e293b; border-radius: 8px; padding: 4px 8px; }
+#controlsRow { display: flex; align-items: center; gap: 8px; }
+#speedo { width: 80px; height: 50px; background: #1e293b; border-radius: 12px; border: 1px solid #475569; position: relative; overflow: hidden; }
+#speedoCanvas { width: 100%; height: 100%; }
+#entregarBtn { flex: 1; background: linear-gradient(180deg, #22c55e, #16a34a); border: none; border-radius: 14px; padding: 14px; font-size: 20px; font-weight: 800; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(34,197,94,0.4); }
+#entregarBtn:active { transform: scale(0.97); }
+#entregarBtn:disabled { background: #475569; box-shadow: none; cursor: not-allowed; }
+#musicBox { background: #1e293b; border-radius: 12px; padding: 6px 10px; border: 1px solid #475569; text-align: center; font-size: 12px; }
+#bottomIcons { display: flex; justify-content: space-around; margin-top: 8px; }
+.icon-btn { width: 48px; height: 48px; background: #1e293b; border: 2px solid #38bdf8; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; }
+.icon-btn:active { transform: scale(0.92); }
+#stars { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); font-size: 18px; z-index: 10; text-shadow: 0 0 8px #000; }
+.rotate-hint { position: absolute; font-size: 14px; color: #94a3b8; pointer-events: none; }
 </style>
 </head>
 <body>
-<div id="app">
-  <header class="top">
-    <section class="panel profile">
-      <div class="logo">Royal<br>Rush</div>
+<div id="gameContainer">
+  <div id="topBar">
+    <div class="top-box" id="playerInfo">
+      <span style="font-size:18px">🏍️</span>
       <div>
-        <div class="name">🏍️ Fer</div>
-        <div class="order">Pedido <b id="orderNo">4</b>/100</div>
-        <div class="stats"><span class="money">💰 <b id="cash">$283</b></span><span class="diamonds">💎 <b id="gems">0</b></span><span>🏙️ <b id="buildings">0</b></span><span class="energy">⚡ <b id="energy">1</b></span></div>
+        <div style="font-weight:700">Fer</div>
+        <div class="label">Pedido <span id="orderNum">4</span>/100</div>
       </div>
-    </section>
-    <section class="panel mission">
-      <div class="missionIcon">⚙️<small>MISIÓN</small></div>
-      <div><strong>OBLIGATORIO: ⚡</strong><span id="missionText">Usa una Ayuda del Tablero</span></div>
-    </section>
-    <section class="panel timer"><small>⏱️</small><b id="timer">40</b></section>
-  </header>
-
-  <main id="mapWrap" aria-label="Mapa de la ciudad">
-    <canvas id="staticMap"></canvas>
-    <canvas id="dynamicMap"></canvas>
-    <div id="rotateHint">Toca una calle para girarla ↻</div>
-    <div id="toast"></div>
-  </main>
-  <div class="status">📦 Pedido #<b id="orderLabel">4</b> | 👆 <span id="statusText">Gira las calles para preparar la ruta</span> <span id="stars"></span></div>
-  <section class="controls">
-    <div class="speed"><label>KM/H</label><b id="speed">0</b></div>
-    <button id="deliver">📦 ENTREGAR</button>
-    <div class="music"><span>♫ Música</span><div><span>📂</span><span>▶️</span><span>⏭️</span></div></div>
-  </section>
-  <nav class="bottom">
-    <button class="tool" title="Ayuda" id="help">⚡</button>
-    <button class="tool" title="Tiempo">⏱️</button>
-    <button class="tool" title="Ciudad">🏙️</button>
-    <button class="tool" title="Sonido">🔊</button>
-    <button class="tool" title="Tienda">🛍️</button>
-    <button class="tool" title="Colección">🖼️</button>
-    <button class="tool" title="Menú" id="menu">☰</button>
-  </nav>
+    </div>
+    <div id="missionBox">
+      <div class="title">🎯 MISIÓN</div>
+      <div class="text" id="missionText">Usa una Ayuda del Tablero</div>
+    </div>
+    <div id="timerBox">
+      <div style="font-size:10px;color:#94a3b8">⏱️</div>
+      <div id="timer">40</div>
+    </div>
+  </div>
+  <div id="canvasWrap">
+    <canvas id="gameCanvas"></canvas>
+    <div id="stars">⭐⭐⭐</div>
+  </div>
+  <div id="bottomBar">
+    <div id="orderInfo">
+      <div class="box">📦 Pedido #<span id="orderDisplay">4</span></div>
+      <div class="box">👆 Prepara la ruta</div>
+      <div style="margin-left:auto;font-weight:700;color:#fbbf24">$<span id="money">283</span></div>
+      <div style="color:#60a5fa">💎 <span id="diamonds">0</span></div>
+    </div>
+    <div id="controlsRow">
+      <div id="speedo"><canvas id="speedoCanvas" width="160" height="100"></canvas></div>
+      <button id="entregarBtn">📦 ENTREGAR</button>
+      <div id="musicBox">🎵 Música<br><span style="font-size:18px">▶️</span></div>
+    </div>
+    <div id="bottomIcons">
+      <div class="icon-btn">⚡</div>
+      <div class="icon-btn">⏱️</div>
+      <div class="icon-btn">🌉</div>
+      <div class="icon-btn">🔊</div>
+      <div class="icon-btn">🛍️</div>
+      <div class="icon-btn">🖼️ 0/1</div>
+      <div class="icon-btn">☰</div>
+    </div>
+  </div>
 </div>
 <script>
-(()=> {
-"use strict";
-const COLS=6, ROWS=7, DPR=2;
-const staticCanvas=document.getElementById("staticMap"), mapCanvas=document.getElementById("dynamicMap");
-const sctx=staticCanvas.getContext("2d"), ctx=mapCanvas.getContext("2d");
-const $=id=>document.getElementById(id);
-const assets={};
-const assetNames=["road_straight","road_curve","road_t","road_cross","factory","cafeteria","playground","motorcycle","car","coin"];
-let loaded=0;
-assetNames.forEach(n=>{const im=new Image();im.src="assets/"+n+".png";im.onload=()=>{loaded++;if(loaded===assetNames.length)drawStatic()};assets[n]=im;});
-let W=0,H=0,tile=0,ox=0,oy=0,anim=null,coins=[],route=[],carPositions=[],timer=40;
-const saved=JSON.parse(localStorage.getItem("deliveryRushV2")||"{}");
-let cash=saved.cash??283,gems=saved.gems??0,order=saved.order??4,energy=saved.energy??1,delivered=saved.delivered??0;
-$("cash").textContent="$"+cash;$("gems").textContent=gems;$("orderNo").textContent=order;$("orderLabel").textContent=order;$("energy").textContent=energy;$("buildings").textContent=delivered;
-const N=1,E=2,S=4,WEST=8;
-const rotateMask=m=>((m<<1)&15)|(m>>3);
-const tileMap=[
- // type, rotation, road, coin
- ["block",0,false,0],["road",1,true,1],["block",0,false,0],["road",1,true,1],["block",0,false,0],["road",1,true,1],
- ["road",0,true,1],["road",1,true,0],["road",0,true,1],["block",0,false,0],["road",0,true,0],["road",0,true,1],
- ["block",0,false,0],["road",1,true,1],["block",0,false,0],["road",1,true,0],["block",0,false,0],["road",0,true,1],
- ["start",0,true,0],["road",1,true,1],["road",0,true,1],["road",1,true,1],["road",0,true,1],["road",1,true,1],
- ["block",0,false,0],["block",0,false,0],["play",0,false,0],["road",0,true,0],["block",0,false,0],["road",0,true,0],
- ["road",0,true,1],["road",1,true,1],["road",0,true,1],["block",0,false,0],["road",1,true,1],["dest",0,true,0],
- ["road",0,true,1],["block",0,false,0],["road",0,true,1],["road",1,true,1],["block",0,false,0],["road",0,true,1]
+const COLS = 6, ROWS = 7;
+const TILE = 64; // base size, will scale
+let canvas, ctx, mapCanvas, mapCtx, speedoCanvas, speedoCtx;
+let dpr = Math.min(window.devicePixelRatio || 1, 2);
+let grid = [];
+let startPos = {c:0, r:3};
+let endPos = {c:5, r:2};
+let coins = [];
+let path = [];
+let shortest = 0;
+let stars = 0;
+let money = 283, diamonds = 0, order = 4;
+let timer = 40, timerId = null;
+let running = false;
+let motoPos = {x:0, y:0, angle:0, progress:0};
+let assets = {};
+let imagesLoaded = 0;
+const ASSET_LIST = [
+  'street_straight','street_curve','street_t','street_cross','street_dead',
+  'block_factory','block_cafeteria','block_jugueteria','block_park',
+  'moto','car','coin'
 ];
-// Default connections: designed route from left-middle to bottom-right, with a few rotatable junctions.
-const masks=[
- 0,NS(),0,NS(),0,NS(),
- EW(),NESW(),EW(),0,NS(),NS(),
- 0,EW(),0,NS(),0,NS(),
- EW(), EW(), EW(), EW(), EW(), S|WEST,
- 0,0,0,NS(),0,0,
- 0,0,0,NS(),0,N|S,
- NS(),EW(),NS(),0,NS(),N|S,
- NS(),0,NS(),EW(),0,NS()
+
+// Fixed layout matching reference style: 0=building, 1=road rotatable
+const LAYOUT = [
+  [2,1,0,1,0,1],
+  [1,1,1,1,1,1],
+  [0,1,3,1,4,1],
+  [1,1,1,1,1,1],
+  [0,1,5,1,0,1],
+  [1,1,1,1,1,1],
+  [0,1,0,1,0,1]
 ];
-function NS(){return N|S} function EW(){return E|WEST} function NESW(){return N|E|S|WEST}
-let cells=tileMap.map((v,i)=>({type:v[0],rotation:v[1],isRoad:v[2],coin:!!v[3],mask:masks[i]||0,coinTaken:false}));
-const start=3*COLS, dest=5*COLS+5;
-// Start/destination anchors
-cells[start].type="start";cells[start].isRoad=true;cells[start].mask=E;
-cells[dest].type="dest";cells[dest].isRoad=true;cells[dest].mask=N|S;
-// add initial puzzle break: rotate one horizontal road away from the route
-cells[3*COLS+2].rotation=1; cells[3*COLS+2].mask=NS();
-coins=cells.map((c,i)=>c.coin?i:-1).filter(i=>i>=0);
-function save(){localStorage.setItem("deliveryRushV2",JSON.stringify({cash,gems,order,energy,delivered}));}
-function showToast(t){const el=$("toast");el.textContent=t;el.classList.add("show");clearTimeout(showToast.t);showToast.t=setTimeout(()=>el.classList.remove("show"),1700)}
-function resize(){
- const r=$("mapWrap").getBoundingClientRect();W=r.width;H=r.height;
- tile=Math.min(W/COLS,H/ROWS);ox=(W-tile*COLS)/2;oy=(H-tile*ROWS)/2;
- [staticCanvas,mapCanvas].forEach(c=>{c.width=Math.round(W*DPR);c.height=Math.round(H*DPR);c.style.width=W+"px";c.style.height=H+"px"});
- sctx.setTransform(DPR,0,0,DPR,0,0);ctx.setTransform(DPR,0,0,DPR,0,0);
- drawStatic();drawDynamic();
+// 0 empty/building random, 1 road, 2 factory, 3 cafeteria, 4 jugueteria, 5 park
+const BUILDINGS = {2:'block_factory',3:'block_cafeteria',4:'block_jugueteria',5:'block_park'};
+
+const ROAD_TYPES = {
+  straight: {img:'street_straight', conns:[0,1,0,1]}, // N E S W bit 0-3
+  curve: {img:'street_curve', conns:[1,1,0,0]},
+  t: {img:'street_t', conns:[1,1,1,0]},
+  cross: {img:'street_cross', conns:[1,1,1,1]},
+  dead: {img:'street_dead', conns:[1,0,0,0]}
+};
+const ROAD_KEYS = Object.keys(ROAD_TYPES);
+
+function rotateConns(conns, rot) {
+  let c = conns.slice();
+  for (let i=0; i<rot; i++) c = [c[3], c[0], c[1], c[2]];
+  return c;
 }
-function drawRoad(ctx,x,y,mask,rotation=0){
- const cx=x+tile/2,cy=y+tile/2,w=tile*.54;
- ctx.fillStyle="#bfc5c4";ctx.fillRect(x,y,tile,tile);
- ctx.fillStyle="#7e8a88";ctx.fillRect(x+1,y+1,tile-2,tile-2);
- ctx.fillStyle="#30383b";ctx.fillRect(x+tile*.22,y+tile*.02,tile*.56,tile*.96);
- ctx.fillStyle="#e3e1d5";ctx.fillRect(x+tile*.18,y+tile*.02,tile*.04,tile*.96);ctx.fillRect(x+tile*.78,y+tile*.02,tile*.04,tile*.96);
- ctx.fillStyle="#f7cb38";ctx.setLineDash([tile*.12,tile*.1]);ctx.lineWidth=Math.max(1,tile*.035);
- ctx.beginPath();ctx.moveTo(cx,y+tile*.05);ctx.lineTo(cx,y+tile*.95);ctx.stroke();ctx.setLineDash([]);
- // crosswalks near road exits
- ctx.fillStyle="#f1f2eb";
- if(mask&N)for(let i=0;i<5;i++)ctx.fillRect(x+tile*.27+i*tile*.1,y+tile*.04,tile*.055,tile*.12);
- if(mask&S)for(let i=0;i<5;i++)ctx.fillRect(x+tile*.27+i*tile*.1,y+tile*.84,tile*.055,tile*.12);
- if(mask&E)for(let i=0;i<5;i++)ctx.fillRect(x+tile*.84,y+tile*.27+i*tile*.1,tile*.12,tile*.055);
- if(mask&WEST)for(let i=0;i<5;i++)ctx.fillRect(x+tile*.04,y+tile*.27+i*tile*.1,tile*.12,tile*.055);
- // side streets overlay to create true junction topology
- ctx.save();ctx.translate(cx,cy);ctx.rotate(rotation*Math.PI/2);ctx.translate(-cx,-cy);
- ctx.fillStyle="#30383b";
- if(mask&E||mask&WEST)ctx.fillRect(x+tile*.02,y+tile*.23,tile*.96,tile*.54);
- ctx.fillStyle="#f7cb38";ctx.setLineDash([tile*.12,tile*.1]);ctx.lineWidth=Math.max(1,tile*.035);
- if(mask&E||mask&WEST){ctx.beginPath();ctx.moveTo(x+tile*.05,cy);ctx.lineTo(x+tile*.95,cy);ctx.stroke()}
- ctx.setLineDash([]);ctx.restore();
+
+function initGrid() {
+  grid = [];
+  for (let r=0; r<ROWS; r++) {
+    grid[r] = [];
+    for (let c=0; c<COLS; c++) {
+      const l = LAYOUT[r][c];
+      if (l === 1) {
+        const type = ROAD_KEYS[Math.floor(Math.random()*ROAD_KEYS.length)];
+        grid[r][c] = {type, rot: Math.floor(Math.random()*4), locked: false, isRoad: true};
+      } else if (BUILDINGS[l]) {
+        grid[r][c] = {type: BUILDINGS[l], isRoad: false, locked: true};
+      } else {
+        // random building or park-like
+        const b = ['block_factory','block_cafeteria','block_jugueteria','block_park'][Math.floor(Math.random()*4)];
+        grid[r][c] = {type: b, isRoad: false, locked: true};
+      }
+    }
+  }
+  // Force start and end areas as roads
+  grid[startPos.r][startPos.c] = {type:'straight', rot:1, locked:true, isRoad:true};
+  grid[endPos.r][endPos.c] = {type:'straight', rot:0, locked:true, isRoad:true};
+  // Place some coins on roads
+  coins = [];
+  for (let i=0; i<8; i++) {
+    const c = Math.floor(Math.random()*COLS), r = Math.floor(Math.random()*ROWS);
+    if (grid[r][c].isRoad && !(c===startPos.c && r===startPos.r) && !(c===endPos.c && r===endPos.r)) {
+      coins.push({c, r, collected:false});
+    }
+  }
 }
-function drawBlock(ctx,x,y,type){
- ctx.fillStyle="#b9b4a6";ctx.fillRect(x,y,tile,tile);
- ctx.fillStyle="#d8d1bf";ctx.fillRect(x+2,y+2,tile-4,tile-4);
- ctx.fillStyle="#6b8b65";ctx.fillRect(x+tile*.04,y+tile*.04,tile*.92,tile*.92);
- const im=assets[type==="factory"?"factory":type==="cafe"?"cafeteria":"playground"];
- if(im&&im.complete&&im.naturalWidth)ctx.drawImage(im,x+tile*.04,y+tile*.04,tile*.92,tile*.92);
- else {ctx.fillStyle=type==="factory"?"#2477a9":type==="cafe"?"#a65d35":"#e5a12a";ctx.fillRect(x+tile*.2,y+tile*.2,tile*.6,tile*.6)}
+
+function getConnections(tile) {
+  if (!tile || !tile.isRoad) return [0,0,0,0];
+  const base = ROAD_TYPES[tile.type].conns;
+  return rotateConns(base, tile.rot || 0);
 }
-function drawStatic(){
- if(!W||!H)return;
- sctx.clearRect(0,0,W,H);
- sctx.fillStyle="#52624e";sctx.fillRect(0,0,W,H);
- // textured grass base
- for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
-  const i=r*COLS+c,cell=cells[i],x=ox+c*tile,y=oy+r*tile;
-  if(cell.isRoad){drawRoad(sctx,x,y,cell.mask,cell.rotation)}
-  else {let type="factory";if(i===2*COLS+2)type="cafe";if(i===4*COLS+2||i===4*COLS+5)type="play";drawBlock(sctx,x,y,type)}
-  sctx.strokeStyle="#ffffff18";sctx.lineWidth=1;sctx.strokeRect(x,y,tile,tile);
- }
- // road edges + coin locations are painted in dynamic layer
+
+function canMove(fromC, fromR, toC, toR) {
+  if (toC<0 || toC>=COLS || toR<0 || toR>=ROWS) return false;
+  const t = grid[toR][toC];
+  if (!t || !t.isRoad) return false;
+  const dc = toC - fromC, dr = toR - fromR;
+  let dirFrom = -1, dirTo = -1;
+  if (dc===1 && dr===0) { dirFrom=1; dirTo=3; } // east from, west to
+  else if (dc===-1 && dr===0) { dirFrom=3; dirTo=1; }
+  else if (dc===0 && dr===1) { dirFrom=2; dirTo=0; }
+  else if (dc===0 && dr===-1) { dirFrom=0; dirTo=2; }
+  else return false;
+  const fromConns = getConnections(grid[fromR][fromC]);
+  const toConns = getConnections(t);
+  return fromConns[dirFrom] && toConns[dirTo];
 }
-function cellCenter(i){return{x:ox+(i%COLS+.5)*tile,y:oy+(Math.floor(i/COLS)+.5)*tile}}
-function getMask(cell){let m=cell.mask;for(let k=0;k<cell.rotation;k++)m=rotateMask(m);return m}
-function neighbors(i){
- const r=Math.floor(i/COLS),c=i%COLS,m=getMask(cells[i]),out=[];
- const dirs=[[N,-COLS,S],[E,1,WEST],[S,COLS,N],[WEST,-1,E]];
- for(const [bit,delta,opp] of dirs){if(!(m&bit))continue;const j=i+delta;if(j<0||j>=cells.length)continue;if(bit===E&&c===COLS-1||bit===WEST&&c===0)continue;if(getMask(cells[j])&opp)out.push(j)}
- return out;
+
+function bfs() {
+  const q = [[startPos.c, startPos.r, []]];
+  const visited = new Set([startPos.c+','+startPos.r]);
+  while (q.length) {
+    const [c, r, p] = q.shift();
+    const np = p.concat([[c,r]]);
+    if (c===endPos.c && r===endPos.r) return np;
+    const dirs = [[0,-1],[1,0],[0,1],[-1,0]];
+    for (const [dc,dr] of dirs) {
+      const nc = c+dc, nr = r+dr;
+      const key = nc+','+nr;
+      if (!visited.has(key) && canMove(c,r,nc,nr)) {
+        visited.add(key);
+        q.push([nc, nr, np]);
+      }
+    }
+  }
+  return null;
 }
-function bfs(){
- const q=[start],prev=new Map([[start,-1]]);
- for(let p=0;p<q.length;p++){const i=q[p];if(i===dest)break;for(const j of neighbors(i))if(!prev.has(j)){prev.set(j,i);q.push(j)}}
- if(!prev.has(dest))return [];
- const path=[];for(let i=dest;i!==-1;i=prev.get(i))path.push(i);return path.reverse();
+
+function calcStars(len) {
+  if (!shortest) shortest = len;
+  const ratio = shortest / len;
+  if (ratio >= 0.95) return 3;
+  if (ratio >= 0.7) return 2;
+  return 1;
 }
-function drawDynamic(){
- if(!W||!H)return;ctx.clearRect(0,0,W,H);
- // coin markers
- cells.forEach((c,i)=>{if(c.coin&&!c.coinTaken){const p=cellCenter(i),rad=tile*.19;ctx.save();ctx.shadowColor="#ffb300";ctx.shadowBlur=8;ctx.fillStyle="#ffb91f";ctx.strokeStyle="#fff1a6";ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,rad,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle="#8a4c00";ctx.font=`900 ${tile*.22}px system-ui`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("$",p.x,p.y+1);ctx.restore()}});
- route=bfs();
- if(route.length>1){
-  ctx.save();ctx.strokeStyle="#04ed78";ctx.lineWidth=Math.max(4,tile*.095);ctx.lineCap="round";ctx.lineJoin="round";ctx.shadowColor="#00ff82";ctx.shadowBlur=8;ctx.beginPath();
-  route.forEach((i,k)=>{const p=cellCenter(i);if(k===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});ctx.stroke();ctx.shadowBlur=0;
-  const p=cellCenter(route[Math.min(1,route.length-1)]);ctx.fillStyle="#04ed78";ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x-tile*.17,p.y-tile*.14);ctx.lineTo(p.x-tile*.17,p.y+tile*.14);ctx.closePath();ctx.fill();ctx.restore();
- }
- // destination ring
- const d=cellCenter(dest);ctx.save();ctx.strokeStyle="#04e875";ctx.lineWidth=4;ctx.shadowColor="#00ff80";ctx.shadowBlur=10;ctx.beginPath();ctx.arc(d.x,d.y,tile*.42,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle="#0a8c58";ctx.beginPath();ctx.arc(d.x,d.y,tile*.25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.font=`900 ${tile*.17}px system-ui`;ctx.textAlign="center";ctx.fillText("⌂",d.x,d.y+tile*.04);ctx.font=`900 ${tile*.12}px system-ui`;ctx.fillText("CLIENTE",d.x,d.y+tile*.39);ctx.restore();
- // rotate affordance for rotatable street cells
- cells.forEach((c,i)=>{if(c.isRoad&&i!==start&&i!==dest){const x=ox+(i%COLS+1)*tile-tile*.15,y=oy+(Math.floor(i/COLS))*tile+tile*.15;ctx.fillStyle="#071525a8";ctx.beginPath();ctx.arc(x,y,tile*.105,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e8f3ff";ctx.font=`${tile*.15}px system-ui`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("↻",x,y)}});
- // vehicles
- const bike=anim?anim.pos:cellCenter(start);
- if(assets.motorcycle?.complete&&assets.motorcycle.naturalWidth){ctx.save();ctx.translate(bike.x,bike.y);ctx.rotate(0);ctx.drawImage(assets.motorcycle,-tile*.36,-tile*.2,tile*.72,tile*.4);ctx.restore()}
- // decorative cars
- const carSpots=[cellCenter(8),cellCenter(22),cellCenter(30)];
- carSpots.forEach((p,k)=>{if(assets.car?.complete&&assets.car.naturalWidth)ctx.drawImage(assets.car,p.x-tile*.17,p.y-tile*.28,tile*.34,tile*.56)});
- const steps=route.length>0?route.length-1:0;
- $("stars").textContent=steps?("⭐".repeat(steps<=5?3:steps<=8?2:1)):"";
- $("statusText").textContent=route.length?"Ruta conectada · "+steps+" tramos":"Conecta las calles hasta CLIENTE";
- $("deliver").disabled=route.length<2||!!anim;
+
+function drawMapOnce() {
+  mapCanvas.width = COLS * TILE;
+  mapCanvas.height = ROWS * TILE;
+  mapCtx.fillStyle = '#1a2e1a';
+  mapCtx.fillRect(0,0,mapCanvas.width,mapCanvas.height);
+  for (let r=0; r<ROWS; r++) {
+    for (let c=0; c<COLS; c++) {
+      const tile = grid[r][c];
+      const img = assets[tile.type] || assets[tile.isRoad ? 'street_straight' : 'block_park'];
+      if (img && img.complete) {
+        mapCtx.save();
+        mapCtx.translate(c*TILE + TILE/2, r*TILE + TILE/2);
+        if (tile.isRoad) mapCtx.rotate((tile.rot||0) * Math.PI/2);
+        mapCtx.drawImage(img, -TILE/2, -TILE/2, TILE, TILE);
+        mapCtx.restore();
+      }
+      // small cars on some roads
+      if (tile.isRoad && Math.random()<0.15 && assets.car) {
+        mapCtx.drawImage(assets.car, c*TILE+10, r*TILE+15, 30, 40);
+      }
+    }
+  }
 }
-function rotateCell(i){if(anim||i===start||i===dest||!cells[i].isRoad)return;cells[i].rotation=(cells[i].rotation+1)%4;drawStatic();drawDynamic();if(route.length)showToast("¡Ruta recalculada!");}
-function pointToCell(x,y){const c=Math.floor((x-ox)/tile),r=Math.floor((y-oy)/tile);if(c<0||c>=COLS||r<0||r>=ROWS)return -1;return r*COLS+c}
-mapCanvas.addEventListener("pointerdown",e=>{const r=mapCanvas.getBoundingClientRect(),i=pointToCell(e.clientX-r.left,e.clientY-r.top);if(i>=0)rotateCell(i)});
-function collectCoins(i){const c=cells[i];if(c.coin&&!c.coinTaken){c.coinTaken=true;cash+=5;$("cash").textContent="$"+cash;save();showToast("🪙 +$5 moneda recogida")}}
-function deliver(){
- route=bfs();if(route.length<2){showToast("⚠️ La ruta aún no está conectada");return}
- const steps=route.length-1,stars=steps<=5?3:steps<=8?2:1;
- $("deliver").disabled=true;let index=0;const startTime=performance.now(),duration=Math.max(2500,steps*650);
- anim={pos:cellCenter(route[0])};$("statusText").textContent="La moto está en camino…";
- function frame(now){const t=Math.min(1,(now-startTime)/duration),scaled=t*steps;index=Math.min(steps,Math.floor(scaled));const frac=scaled-index;const a=cellCenter(route[index]),b=cellCenter(route[Math.min(index+1,steps)]);anim.pos={x:a.x+(b.x-a.x)*frac,y:a.y+(b.y-a.y)*frac};$("speed").textContent=t<1?"35":"0";
-  if(index!==anim.last){collectCoins(route[index]);anim.last=index}
-  drawDynamic();if(t<1)requestAnimationFrame(frame);else{anim=null;delivered++;order++;cash+=20*stars;gems+=stars===3?1:0;energy=Math.max(0,energy-1);$("buildings").textContent=delivered;$("orderNo").textContent=order;$("orderLabel").textContent=order;$("cash").textContent="$"+cash;$("gems").textContent=gems;$("energy").textContent=energy;$("speed").textContent="0";$("statusText").textContent=`¡Pedido entregado! ${"⭐".repeat(stars)}`;save();showToast(`¡Entrega completada! +$${20*stars}`);setTimeout(newLevel,1300)}
- }
- requestAnimationFrame(frame);
+
+function draw() {
+  if (!grid.length || !grid[0]) return;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const scale = Math.min(w / (COLS*TILE), h / (ROWS*TILE));
+  const ox = (w - COLS*TILE*scale)/2;
+  const oy = (h - ROWS*TILE*scale)/2;
+  ctx.save();
+  ctx.translate(ox, oy);
+  ctx.scale(scale, scale);
+  if (mapCanvas) ctx.drawImage(mapCanvas, 0, 0);
+  // coins
+  coins.forEach(coin => {
+    if (!coin.collected && assets.coin) {
+      ctx.drawImage(assets.coin, coin.c*TILE + TILE/2-16, coin.r*TILE + TILE/2-16, 32, 32);
+    }
+  });
+  // green path
+  if (path.length > 1) {
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    path.forEach((p,i) => {
+      const x = p[0]*TILE + TILE/2, y = p[1]*TILE + TILE/2;
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+    // arrow at end
+    const last = path[path.length-1], prev = path[path.length-2];
+    if (prev) {
+      const ang = Math.atan2(last[1]-prev[1], last[0]-prev[0]);
+      ctx.save();
+      ctx.translate(last[0]*TILE+TILE/2, last[1]*TILE+TILE/2);
+      ctx.rotate(ang);
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.moveTo(12,0); ctx.lineTo(-8,-8); ctx.lineTo(-8,8); ctx.fill();
+      ctx.restore();
+    }
+  }
+  // CLIENTE circle
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(endPos.c*TILE+TILE/2, endPos.r*TILE+TILE/2, 28, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.fillStyle = '#22c55e';
+  ctx.font = 'bold 11px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('CLIENTE', endPos.c*TILE+TILE/2, endPos.r*TILE+TILE/2+4);
+  // moto
+  if (assets.moto) {
+    ctx.save();
+    ctx.translate(motoPos.x, motoPos.y);
+    ctx.rotate(motoPos.angle);
+    ctx.drawImage(assets.moto, -20, -28, 40, 56);
+    ctx.restore();
+  }
+  // rotate icons on rotatable roads
+  ctx.font = '12px system-ui';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  for (let r=0; r<ROWS; r++) for (let c=0; c<COLS; c++) {
+    const tile = grid[r][c];
+    if (tile.isRoad && !tile.locked) {
+      ctx.fillText('↻', c*TILE + TILE-14, r*TILE + 14);
+    }
+  }
+  ctx.restore();
 }
-function newLevel(){
- // Reset route puzzle and collected coins while keeping saved progression.
- cells.forEach((c,i)=>{c.coinTaken=false;c.rotation=0});
- cells[3*COLS+2].rotation=1;drawStatic();drawDynamic();timer=40;$("timer").textContent=timer;$("missionText").textContent="Conecta la ruta y entrega el pedido";$("deliver").disabled=true;
+
+function updateSpeedo(speed) {
+  const s = speedoCtx;
+  s.clearRect(0,0,160,100);
+  s.fillStyle = '#1e293b';
+  s.fillRect(0,0,160,100);
+  s.strokeStyle = '#334155';
+  s.lineWidth = 8;
+  s.beginPath();
+  s.arc(80, 70, 50, Math.PI, 0);
+  s.stroke();
+  const ang = Math.PI + (speed/120) * Math.PI;
+  s.strokeStyle = speed > 60 ? '#ef4444' : '#22c55e';
+  s.lineWidth = 4;
+  s.beginPath();
+  s.moveTo(80,70);
+  s.lineTo(80 + Math.cos(ang)*40, 70 + Math.sin(ang)*40);
+  s.stroke();
+  s.fillStyle = 'white';
+  s.font = 'bold 14px system-ui';
+  s.textAlign = 'center';
+  s.fillText(Math.round(speed) + ' KM/H', 80, 55);
 }
-$("deliver").addEventListener("click",deliver);
-$("help").addEventListener("click",()=>{if(energy<=0){showToast("No tienes ayudas disponibles");return}energy--;cells[3*COLS+2].rotation=0;$("energy").textContent=energy;drawStatic();drawDynamic();save();showToast("⚡ Ayuda utilizada: calle orientada")});
-$("menu").addEventListener("click",()=>showToast("Delivery Rush · Progreso guardado"));
-document.querySelectorAll(".tool").forEach(b=>{if(!["help","menu"].includes(b.id))b.addEventListener("click",()=>showToast(b.title+" próximamente"))});
-window.addEventListener("resize",resize);
-resize();
-if(loaded===assetNames.length)drawStatic();
-setInterval(()=>{if(timer>0&&!anim){timer--;$("timer").textContent=timer;if(timer===0){timer=40;showToast("⏱️ Tiempo renovado")}}},1000);
-})();
+
+function startDelivery() {
+  if (running || !path || path.length < 2) return;
+  running = true;
+  document.getElementById('entregarBtn').disabled = true;
+  motoPos.progress = 0;
+  const total = path.length - 1;
+  let collected = 0;
+  function step() {
+    if (!running) return;
+    motoPos.progress += 0.012;
+    if (motoPos.progress >= 1) {
+      running = false;
+      money += 50 + collected * 5;
+      document.getElementById('money').textContent = money;
+      localStorage.setItem('dr_money', money);
+      localStorage.setItem('dr_order', order);
+      alert('¡Entrega completada! +$' + (50 + collected*5));
+      nextOrder();
+      return;
+    }
+    const idx = Math.min(Math.floor(motoPos.progress * total), total-1);
+    const frac = (motoPos.progress * total) - idx;
+    const p1 = path[idx], p2 = path[idx+1] || p1;
+    const x1 = p1[0]*TILE + TILE/2, y1 = p1[1]*TILE + TILE/2;
+    const x2 = p2[0]*TILE + TILE/2, y2 = p2[1]*TILE + TILE/2;
+    motoPos.x = x1 + (x2-x1)*frac;
+    motoPos.y = y1 + (y2-y1)*frac;
+    motoPos.angle = Math.atan2(y2-y1, x2-x1) + Math.PI/2;
+    // collect coins
+    coins.forEach(coin => {
+      if (!coin.collected && Math.hypot(motoPos.x - (coin.c*TILE+TILE/2), motoPos.y - (coin.r*TILE+TILE/2)) < 20) {
+        coin.collected = true;
+        collected++;
+        money += 2;
+        document.getElementById('money').textContent = money;
+      }
+    });
+    const speed = 40 + Math.sin(Date.now()/200)*10;
+    updateSpeedo(speed);
+    draw();
+    requestAnimationFrame(step);
+  }
+  step();
+}
+
+function nextOrder() {
+  order++;
+  document.getElementById('orderNum').textContent = order;
+  document.getElementById('orderDisplay').textContent = order;
+  timer = 40;
+  document.getElementById('timer').textContent = timer;
+  running = false;
+  document.getElementById('entregarBtn').disabled = false;
+  initGrid();
+  drawMapOnce();
+  path = bfs() || [];
+  stars = path.length ? calcStars(path.length) : 0;
+  document.getElementById('stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3-stars);
+  motoPos.x = startPos.c*TILE + TILE/2;
+  motoPos.y = startPos.r*TILE + TILE/2;
+  motoPos.angle = 0;
+  draw();
+}
+
+function onCanvasClick(e) {
+  if (running) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX || e.touches[0].clientX) - rect.left;
+  const y = (e.clientY || e.touches[0].clientY) - rect.top;
+  const scale = Math.min(canvas.width / (COLS*TILE), canvas.height / (ROWS*TILE));
+  const ox = (canvas.width - COLS*TILE*scale)/2;
+  const oy = (canvas.height - ROWS*TILE*scale)/2;
+  const tx = (x * (canvas.width/rect.width) - ox) / scale / TILE;
+  const ty = (y * (canvas.height/rect.height) - oy) / scale / TILE;
+  const c = Math.floor(tx), r = Math.floor(ty);
+  if (c>=0 && c<COLS && r>=0 && r<ROWS && grid[r][c].isRoad && !grid[r][c].locked) {
+    grid[r][c].rot = (grid[r][c].rot + 1) % 4;
+    drawMapOnce();
+    path = bfs() || [];
+    stars = path.length ? calcStars(path.length) : 0;
+    document.getElementById('stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3-stars);
+    draw();
+  }
+}
+
+function loadAssets(cb) {
+  ASSET_LIST.forEach(name => {
+    const img = new Image();
+    img.onerror = () => { delete assets[name]; imagesLoaded++; if (imagesLoaded === ASSET_LIST.length) cb(); };
+    img.onload = () => { imagesLoaded++; if (imagesLoaded === ASSET_LIST.length) cb(); };
+    img.src = 'assets/' + name + '.png';
+    assets[name] = img;
+  });
+}
+
+function resize() {
+  const wrap = document.getElementById('canvasWrap');
+  canvas.width = wrap.clientWidth * dpr;
+  canvas.height = wrap.clientHeight * dpr;
+  canvas.style.width = wrap.clientWidth + 'px';
+  canvas.style.height = wrap.clientHeight + 'px';
+  draw();
+}
+
+function init() {
+  canvas = document.getElementById('gameCanvas');
+  ctx = canvas.getContext('2d');
+  mapCanvas = document.createElement('canvas');
+  mapCtx = mapCanvas.getContext('2d');
+  speedoCanvas = document.getElementById('speedoCanvas');
+  speedoCtx = speedoCanvas.getContext('2d');
+  money = parseInt(localStorage.getItem('dr_money')) || 283;
+  order = parseInt(localStorage.getItem('dr_order')) || 4;
+  document.getElementById('money').textContent = money;
+  document.getElementById('orderNum').textContent = order;
+  document.getElementById('orderDisplay').textContent = order;
+  document.getElementById('diamonds').textContent = diamonds;
+  loadAssets(() => {
+    initGrid();
+    drawMapOnce();
+    path = bfs() || [];
+    stars = path.length ? calcStars(path.length) : 0;
+    document.getElementById('stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3-stars);
+    motoPos.x = startPos.c * TILE + TILE/2;
+    motoPos.y = startPos.r * TILE + TILE/2;
+    resize();
+    draw();
+    updateSpeedo(0);
+  });
+  canvas.addEventListener('click', onCanvasClick);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); onCanvasClick(e); }, {passive:false});
+  document.getElementById('entregarBtn').addEventListener('click', startDelivery);
+  window.addEventListener('resize', resize);
+  // timer
+  timerId = setInterval(() => {
+    if (!running && timer > 0) {
+      timer--;
+      document.getElementById('timer').textContent = timer;
+      if (timer <= 0) { alert('¡Tiempo agotado!'); nextOrder(); }
+    }
+  }, 1000);
+}
+
+window.onload = init;
 </script>
 </body>
 </html>
