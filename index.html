@@ -924,7 +924,7 @@ function startNeonIntro() {
                 <button onclick="startGame()" class="btn-game play-btn-wrap mx-auto block scale-90" aria-label="PLAY">
                     <img src="play.png" alt="PLAY" class="play-img" />
                 </button>
-                <p class="text-slate-600 text-[8px]">v1.6</p>
+                <p class="text-slate-600 text-[8px]">v1.7</p>
             </div>
         </div>
     </div>
@@ -967,7 +967,7 @@ function startNeonIntro() {
         <!-- Game Area - Flex-1, Min-Height 0 para forzar scroll interno y no expandir contenedor padre -->
         <div class="relative p-0 overflow-hidden w-full flex justify-center items-center flex-1 min-h-0 bg-slate-900/40" id="gameContainer">
             <canvas id="gameCanvas"></canvas>
-            <div id="zoomControls">
+            <div id="zoomControls" style="display:none">
                 <button type="button" onclick="cameraZoomIn()" title="Acercar">＋</button>
                 <button type="button" onclick="cameraZoomOut()" title="Alejar">－</button>
                 <button type="button" id="btnZoomToggle" onclick="toggleCameraOverview()" title="Vista completa / cerca">🔎</button>
@@ -2911,6 +2911,9 @@ class Tile {
 }
 
 function startGame() {
+    // v1.7: evitar bucles/intervalos duplicados
+    try { cancelAnimationFrame(animationId); cancelAnimationFrame(editRenderId); editRenderId = null; } catch(e) {}
+    [typeof countdownTimer!=='undefined'&&countdownTimer, typeof deliveryTimer!=='undefined'&&deliveryTimer, typeof engineSoundInterval!=='undefined'&&engineSoundInterval, typeof tutorialInterval!=='undefined'&&tutorialInterval].forEach(t => t && clearInterval(t));
     initAudio();
     driverName = $('driverName').value.trim() || "Repartidor";
     
@@ -4026,6 +4029,9 @@ function onCanvasPointerDown(e) {
 }
 
 function onCanvasPointerMove(e) {
+    // v1.7: mapa fijo, sin arrastre ni pinch
+    if (pointerGesture.pointers.has(e.pointerId) && Math.hypot(e.clientX - pointerGesture.startX, e.clientY - pointerGesture.startY) > 10) pointerGesture.moved = true;
+    return;
     if (!pointerGesture.pointers.has(e.pointerId) && pointerGesture.mode !== 'pinch') return;
     if (pointerGesture.pointers.has(e.pointerId)) {
         pointerGesture.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -4084,6 +4090,7 @@ function onCanvasPointerUp(e) {
 }
 
 function onCanvasWheel(e) {
+    return; // v1.7: sin zoom
     if (gameState !== 'EDITING' && gameState !== 'RUNNING') return;
     e.preventDefault();
     const before = screenToWorld(e.clientX, e.clientY);
@@ -5216,6 +5223,10 @@ function drawWorldImageCrisp(img, wx, wy, ww, wh) {
 }
 
 function updateCamera(dtSec) {
+    // v1.7: vista fija del mapa completo
+    camera.overview = true; camera.zoom = camera.targetZoom = camera.fitZoom;
+    camera.x = camera.targetX = worldWidth() / 2; camera.y = camera.targetY = worldHeight() / 2;
+    clampCamera(); return;
     const t = clampNum((dtSec || 0.016) * 8, 0, 1); // smooth follow
     if (gameState === 'RUNNING' && car) {
         camera.targetX = car.x;
@@ -11187,8 +11198,10 @@ function startEditRender() {
         const deltaSec = Math.min((ts - lastEditFrameTime) / 1000, 0.1);
         lastEditFrameTime = ts;
         const segments = Math.max(1, previewPath.length - 1);
+        const animating = previewAnimIndexFloat < segments;
         previewAnimIndexFloat = Math.min(previewAnimIndexFloat + deltaSec * PREVIEW_SPEED_SEGMENTS_PER_SEC, segments);
-        draw();
+        // v1.7: con la ruta ya dibujada, redibujar a ~10 fps para no saturar el celular
+        if (animating || !window.__lastEditDraw || ts - window.__lastEditDraw > 100) { draw(); window.__lastEditDraw = ts; }
         editRenderId = requestAnimationFrame(loop);
     };
     editRenderId = requestAnimationFrame(loop);
