@@ -924,7 +924,7 @@ function startNeonIntro() {
                 <button onclick="startGame()" class="btn-game play-btn-wrap mx-auto block scale-90" aria-label="PLAY">
                     <img src="play.png" alt="PLAY" class="play-img" />
                 </button>
-                <p class="text-slate-600 text-[8px]">v1.7</p>
+                <p class="text-slate-600 text-[8px]">v1.8</p>
             </div>
         </div>
     </div>
@@ -9872,24 +9872,22 @@ function drawTile(tile) {
     ctx.save();
     // Fondo: fichas girables se destacan con fondo más claro
     const isRotatable = !tile.locked && tile.type !== TILE_TYPES.BLOCKED && tile.type !== TILE_TYPES.START && tile.type !== TILE_TYPES.END;
-    ctx.fillStyle = isRotatable ? 'rgba(30, 41, 59, 0.95)' : theme.tileBase;
+    ctx.fillStyle = (tile.special === 'house' || tile.type === TILE_TYPES.BLOCKED) ? theme.tileBase : '#3f7d3a'; // v1.8: césped bajo las calles
     ctx.fillRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
     ctx.save();
     // Borde más visible en fichas girables
-    ctx.strokeStyle = isRotatable ? '#38bdf8' : theme.tileBorder;
-    ctx.lineWidth = isRotatable ? 3 : 1.2;
-    ctx.shadowColor = isRotatable ? 'rgba(56, 189, 248, 0.6)' : theme.tileShadow;
-    ctx.shadowBlur = isRotatable ? 8 : 4;
+    ctx.strokeStyle = isRotatable ? 'rgba(56, 189, 248, 0.55)' : 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1;
     ctx.strokeRect(x + 1.5, y + 1.5, TILE_SIZE - 3, TILE_SIZE - 3);
     ctx.restore();
     // Pequeño ícono de giro en fichas girables
     if (isRotatable && gameState === 'EDITING') {
         ctx.save();
         ctx.fillStyle = '#7dd3fc';
-        ctx.font = `bold ${Math.max(10, TILE_SIZE * 0.18)}px sans-serif`;
+        ctx.font = `bold ${Math.max(9, TILE_SIZE * 0.15)}px sans-serif`; ctx.globalAlpha = 0.8;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('↻', x + TILE_SIZE - 10, y + 10);
+        ctx.fillText('↻', x + TILE_SIZE - 8, y + 8);
         ctx.restore();
     }
 
@@ -10028,7 +10026,7 @@ function drawTile(tile) {
         // --- LÓGICA DE DIBUJO DE CALLE MODIFICADA ---
 
         // 1. Veredas claras a ambos lados del asfalto (gris claro / beige)
-        const curb = Math.max(5, Math.round(TILE_SIZE * 0.14));
+        const curb = Math.max(2, Math.round(TILE_SIZE * 0.05));
         const sidewalkPath = new Path2D();
         const sw = rw + curb * 2;
         const sh = h + curb;
@@ -10036,12 +10034,8 @@ function drawTile(tile) {
         if (conn & DIR.S) sidewalkPath.rect(-sw / 2, -sh, sw, s/2 + sh);
         if (conn & DIR.E) sidewalkPath.rect(-sh, -sh, s/2 + sh, sw);
         if (conn & DIR.W) sidewalkPath.rect(-s/2, -sh, s/2 + sh, sw);
-        ctx.fillStyle = '#e2e8f0'; // gris claro / beige
+        ctx.fillStyle = '#9ca3af'; // v1.8: vereda fina solo a los lados del asfalto
         ctx.fill(sidewalkPath);
-        // Borde exterior de la vereda para mejor contraste
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 1.5;
-        ctx.stroke(sidewalkPath);
 
         // 2. Dibuja la forma base de la carretera con la textura de pavimento.
         // Se usan solo rectángulos para formar una cruz nítida en las intersecciones, sin círculos.
@@ -10078,10 +10072,9 @@ function drawTile(tile) {
         // 3. Dibuja las aceras (veredas) INTERNAS de cada pieza
         // Usamos líneas grises claras para delimitar el asfalto, 
         // pero SIN cerrar las conexiones (entradas/salidas).
-        ctx.strokeStyle = theme.edgeLine; 
-        ctx.lineWidth = 3;
-        ctx.shadowColor = theme.edgeShadow;
-        ctx.shadowBlur = 4;
+        ctx.strokeStyle = 'rgba(203,213,225,0.5)'; 
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
         ctx.beginPath();
